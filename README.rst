@@ -32,7 +32,7 @@ API Status
 +---------------+--------+
 | DMI           | Stable |
 +---------------+--------+
-| Maps          | BROKEN |
+| Maps          | Stable |
 +---------------+--------+
 | Object Tree   | Stable |
 +---------------+--------+
@@ -42,5 +42,5 @@ API Status
 Support
 -------
 
-No commercial or official support is provided, but you are free to 
+No commercial or official support is provided, but you are free to
 submit bug reports or harass N3X15 in irc.rizon.net #vgstation.
