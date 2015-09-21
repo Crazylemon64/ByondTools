@@ -62,28 +62,28 @@ class BYONDValue:
     Handles numbers and unhandled types like lists.
     """
     def __init__(self, string, filename='', line=0, typepath='/', **kwargs):
-        # : The actual value.
+        #: The actual value.
         self.value = string
         
-        # : Filename this was found in
+        #: Filename this was found in
         self.filename = filename
         
-        # : Line of the originating file.
+        #: Line of the originating file.
         self.line = line
         
-        # : Typepath of the value.
+        #: Typepath of the value.
         self.type = typepath
         
-        # : Has this value been inherited?
+        #: Has this value been inherited?
         self.inherited = kwargs.get('inherited', False)
         
-        # : Is this a declaration? (/var)
+        #: Is this a declaration? (/var)
         self.declaration = kwargs.get('declaration', False)
         
-        # : Anything special? (global, const, etc.)
+        #: Anything special? (global, const, etc.)
         self.special = kwargs.get('special', None)
         
-        # : If a list, what's the size?
+        #: If a list, what's the size?
         self.size = kwargs.get('size', None)
         
     def copy(self):
@@ -174,16 +174,16 @@ class BYONDList(BYONDValue):
 class PropertyFlags:
     '''Collection of flags that affect :func:`Atom.setProperty` behavior.'''
     
-    # : Property being set should be saved to the map
+    #: Property being set should be saved to the map
     MAP_SPECIFIED = 1
     
-    # : Property being set should be handled as a string
+    #: Property being set should be handled as a string
     STRING = 2
     
-    # : Property being set should be handled as a file reference
+    #: Property being set should be handled as a file reference
     FILEREF = 4
     
-    # : Property being set should be handled as a value
+    #: Property being set should be handled as a value
     VALUE = 8
     
 class Atom:
@@ -198,46 +198,46 @@ class Atom:
         The line in the aforementioned file.
     '''
 
-    # : Prints all inherited properties, not just the ones that are mapSpecified.
+    #: Prints all inherited properties, not just the ones that are mapSpecified.
     FLAG_INHERITED_PROPERTIES = 1
     
-    # : writeMap2 prints old_ids instead of the actual IID.
+    #: writeMap2 prints old_ids instead of the actual IID.
     FLAG_USE_OLD_ID = 2  
     
     def __init__(self, path, filename='', line=0, **kwargs):
         global TURF_LAYER, AREA_LAYER, OBJ_LAYER, MOB_LAYER
         
-        # : Absolute path of this atom
+        #: Absolute path of this atom
         self.path = path
         
-        # : Vars of this atom, including inherited vars.
+        #: Vars of this atom, including inherited vars.
         self.properties = collections.OrderedDict()
         
-        # : List of var names that were specified by the map, if atom was loaded from a :class:`byond.map.Map`.
+        #: List of var names that were specified by the map, if atom was loaded from a :class:`byond.map.Map`.
         self.mapSpecified = []
         
-        # : Child atoms and procs.
+        #: Child atoms and procs.
         self.children = {}
         
-        # : The parent of this atom.
+        #: The parent of this atom.
         self.parent = None
         
-        # : The file this atom originated from.
+        #: The file this atom originated from.
         self.filename = filename
         
-        # : Line from the originating file.
+        #: Line from the originating file.
         self.line = line
         
-        # : Instance ID (maps only).  Used internally, do NOT change.
+        #: Instance ID (maps only).  Used internally, do NOT change.
         self.ID = None
         
-        # : Instance ID that was read from the map.
+        #: Instance ID that was read from the map.
         self.old_id = None
         
-        # : Used internally.
+        #: Used internally.
         self.ob_inherited = False
         
-        # : Loaded from map, but missing in the code. (Maps only)
+        #: Loaded from map, but missing in the code. (Maps only)
         self.missing = kwargs.get('missing', False)
         
         # if not self.missing and path == '/area/engine/engineering':
@@ -245,10 +245,10 @@ class Atom:
         
         self._hash = None
         
-        # : Coords
+        #: Coords
         self.coords = None
         
-        # : Used for masters to track instance locations.
+        #: Used for masters to track instance locations.
         self.locations = []
         
     def rmLocation(self, map, coord, autoclean=True):

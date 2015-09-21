@@ -1,6 +1,6 @@
-.. module:: com.byond.basetypes
+.. module:: byond.basetypes
 
-:mod:`com.byond.basetypes` -- Basic BYOND Types
+:mod:`byond.basetypes` -- Basic BYOND Types
 ===============================================
 
 Basic Types

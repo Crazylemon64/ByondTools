@@ -6,15 +6,25 @@ class State:
     # So we don't overwrite the static state.
     MovementTag = 'M'
     def __init__(self, nm):
+        #: Name of the state.
         self.name = nm
+        #: Hotspot location (raw)
         self.hotspot = ''
+        #: Number of frames this state has.
         self.frames = 0
+        #: Number of directions (1, 4, or 8)
         self.dirs = 1
+        #: Movement state?
         self.movement = 0
+        #: Loops after playing?
         self.loop = 0
+        #: Rewind after playing?
         self.rewind = 0
+        #: decisecond delay, for each frame.
         self.delay = []
+        #: Pillow image frames.
         self.icons = []
+        # I forgot what the hell this is.
         self.positions = []
         
     @staticmethod
@@ -29,11 +39,9 @@ class State:
         
     def genManifest(self):
         '''
-state = "void"
-        dirs = 4
-        frames = 4
-        delay = 2,2,2,2
+        Generate a DMI header manifest for this state.
         '''
+
         o = '\r\nstate = "{0}"'.format(self.name)
         o += self.genManifestLine('hotspot', self.hotspot, '')
         o += self.genManifestLine('frames', self.frames, -1)
@@ -107,6 +115,14 @@ state = "void"
         return self.frames * self.dirs
     
     def getFrameIndex(self, direction, frame):
+        '''
+        From the direction and frame index specified, ascertain the appropriate raw frame index.
+        
+        :param int direction:
+            BYONDTools Direction
+        :param int frame:
+            Index of the frame, as seen in DreamMaker (0-based)
+        '''
         _dir = 0
         if self.dirs == 4 or self.dirs == 8:
             _dir = directions.IMAGE_INDICES.index(direction)
@@ -119,9 +135,27 @@ state = "void"
         return frame
     
     def getFrame(self, direction, frame):
+        '''
+        Get the Pillow image of the desired direction and frame.
+        
+        :param int direction:
+            BYONDTools Direction
+        :param int frame:
+            Index of the frame, as seen in DreamMaker (0-based)
+        '''
         return self.icons[self.getFrameIndex(direction, frame)]
     
     def setFrame(self, direction, frame, img):
+        '''
+        Set the Pillow image of the desired direction and frame.
+        
+        :param int direction:
+            BYONDTools Direction
+        :param int frame:
+            Index of the frame, as seen in DreamMaker (0-based)
+        :param PIL.Image img:
+            Pillow image to set the frame to.
+        '''
         fi = self.getFrameIndex(direction, frame)
         if len(self.icons) < fi:
             shouldBeSize = 1
