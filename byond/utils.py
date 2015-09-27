@@ -19,7 +19,8 @@ def md5sum(filename):
 
 # supported operators
 operators = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
-             ast.Div: op.truediv, ast.Pow: op.pow, ast.BitXor: op.xor}
+             ast.Div: op.truediv, ast.Pow: op.pow, ast.BitXor: op.xor, ast.BitOr: op.or_,
+             ast.Invert: op.inv, ast.LShift: op.lshift, ast.RShift: op.rshift, ast.Mod: op.mod}
 
 def eval_expr(expr):
     """
@@ -30,6 +31,7 @@ def eval_expr(expr):
     >>> eval_expr('1 + 2*3**(4^5) / (6 + -7)')
     -5.0
     """
+    #print(dir(ast))
     return eval_(ast.parse(expr).body[0].value)  # Module(body=[Expr(value=...)])
 
 def getElapsed(start):
