@@ -25,7 +25,7 @@ def debug(filename, line, path, message):
     
 class OTRCache:
     #: Only used for obliterating outdated data.
-    VERSION = [18, 6, 2014]
+    VERSION = [27, 9, 2015]
     
     def __init__(self, filename):
         self.filename = filename
@@ -215,7 +215,7 @@ class ObjectTree:
                 cache.SetFileMD5(filepath, md5)
         if invalid or self.skip_otr or changed_files > 0:
             if invalid:
-                self.log.info('Rebuilding object tree - Parsing DM files...'.format(changed_files))
+                self.log.info('Rebuilding object tree - Parsing DM files...')
             else:
                 self.log.info('{0} changed files. Parsing DM files...'.format(changed_files))
             for f in ToRead:
@@ -494,7 +494,7 @@ class ObjectTree:
                                 del defineChunks[2]
                             defineChunks = defineChunks[0:2]+[' '.join(defineChunks[2:])]
                             defineChunks[2] = self.PreprocessLine(defineChunks[2], filename)
-                        print(repr(defineChunks))
+                        #print(repr(defineChunks))
                         
                         define_name, define_value = defineChunks[1:]
                         # TODO: We don't know how to handle parameterized macros yet.
@@ -509,7 +509,7 @@ class ObjectTree:
                                 self.defines[define_name] = BYONDValue(int(define_value), filename, ln)
                         except:
                             self.defines[define_name] = BYONDString(self.calculate(str(define_value)), filename, ln)
-                        self.fileLayout += [('DEFINE', define_name, self.calculate(define_value))]
+                        self.fileLayout += [('DEFINE', define_name, define_value)]
                     elif directive == 'undef':
                         undefChunks = line.split(' ', 2)
                         if undefChunks[1] in self.defines:
@@ -755,8 +755,8 @@ class ObjectTree:
                 newline = self.defineMatchers[key].sub(str(define.value), line)
                 if newline != line:
 
-                    if filename.endswith('pipes.dm'):
-                        print('OLD: {}'.format(line))
-                        print('PPD: {}'.format(newline))
+                    #if filename.endswith('pipes.dm'):
+                    #    print('OLD: {}'.format(line))
+                    #    print('PPD: {}'.format(newline))
                     line = newline
         return line
