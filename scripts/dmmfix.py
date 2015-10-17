@@ -107,43 +107,53 @@ thousandsActivity=0
 #for tile in it:
 #    if tile is None: continue
 #    for atom in tile.GetAtoms(): 
-for atom in list(dmm.Atoms()):        
-    ': :type atom Atom:'
-    changes = []
-    #tile.RemoveAtom(atom)
+for atom in list(dmm.Atoms()):    
+    '''
+    :type atom Atom:
+    '''
     hash = atom.GetHash()
     if hash in hashMap:
         val = hashMap[hash]
         if val is None or type(val) is Tile:
             atom = val
     else:
-        atomInfo='{0} #{1}:'.format(atom.path, atom.ID)
-        for action in actions:
-            action.SetTree(tree)
-            if action.Matches(atom):
-                new_atom = action.Fix(atom)
-                changes += [str(action)]
-                if new_atom is None: 
-                    dmm.RemoveAtom(atom)
+        #print(atom.ID)
+        iteration=0
+        while True:
+            iteration+=1
+            changes = []
+            #tile.RemoveAtom(atom)
+            atomInfo='{0} #{1}:'.format(atom.path, atom.ID)
+            for action in actions:
+                action.SetTree(tree)
+                if action.Matches(atom):
+                    new_atom = action.Fix(atom)
+                    changes += [str(action)]
+                    if new_atom is None: 
+                        dmm.RemoveAtom(atom)
+                        atom=new_atom
+                        break
                     atom=new_atom
-                    break
-                atom=new_atom
-        
-        '''
-        compiled_atom = tree.GetAtom(atom.path)
-        if compiled_atom is not None:
-            for propname in list(atom.properties.keys()):
-                if propname not in compiled_atom.properties and propname not in ('req_access_txt','req_one_access_txt'):
-                    del atom.properties[propname]
-                    if propname in atom.mapSpecified:
-                        atom.mapSpecified.remove(propname)
-                    changes += ['Dropped property {0} (not found in compiled atom)'.format(propname)]
-        '''
-        if len(changes) > 0:
-            thousandsActivity+=1
-            logging.info(atomInfo if atom is not None else '{} (DELETED)'.format(atomInfo))
-            for change in changes:
-                logging.info(' * ' + change)
+            
+            '''
+            compiled_atom = tree.GetAtom(atom.path)
+            if compiled_atom is not None:
+                for propname in list(atom.properties.keys()):
+                    if propname not in compiled_atom.properties and propname not in ('req_access_txt','req_one_access_txt'):
+                        del atom.properties[propname]
+                        if propname in atom.mapSpecified:
+                            atom.mapSpecified.remove(propname)
+                        changes += ['Dropped property {0} (not found in compiled atom)'.format(propname)]
+            '''
+            if len(changes) > 0:
+                thousandsActivity+=1
+                if iteration==1:
+                    logging.info(atomInfo if atom is not None else '{} (DELETED)'.format(atomInfo))
+                for change in changes:
+                    logging.info(' * %s (%d)', change, iteration)
+            else:
+                #logging.info('Finished processing {}'.format(atomInfo[:-1]))
+                break
     if hash not in hashMap:
         if len(changes) == 0:
             hashMap[hash]=True
