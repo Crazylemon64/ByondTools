@@ -428,9 +428,13 @@ class Atom:
         return myLayer < otherLayer
         
     def __str__(self):
+        return self.serialize(self.mapSpecified if len(self.mapSpecified) > 0 else None)
+    
+    def serialize(self, propkeys=None):
         atomContents = []
         for key, val in self.properties.items():
-            atomContents += ['{0}={1}'.format(key, val)]
+            if propkeys is None or key in propkeys:
+                atomContents += ['{0}={1}'.format(key, val)]
         return '{}{{{}}}'.format(self.path, ';'.join(atomContents))
     
     def dumpPropInfo(self, name):

@@ -99,10 +99,10 @@ class OffsetPipeLayers(Matcher):
         return False
 
     def Fix(self, atom):
-        print('MIN: {}'.format(PIPING_LAYER_MIN))
-        print('MAX: {}'.format(PIPING_LAYER_MAX))
+        #print('MIN: {}'.format(PIPING_LAYER_MIN))
+        #print('MAX: {}'.format(PIPING_LAYER_MAX))
         self.layer = int(atom.getProperty('piping_layer'))
-        print('LAYER: {}'.format(self.layer))
+        #print('LAYER: {}'.format(self.layer))
         if self.layer < PIPING_LAYER_MIN:
             self.layer = PIPING_LAYER_MIN
             atom.setProperty('piping_layer', PIPING_LAYER_MIN, PropertyFlags.MAP_SPECIFIED)
@@ -210,7 +210,7 @@ class StandardizePiping(Matcher):
         return Atom(tmpl.format(color=color, visibility=visibility))
 
     def Matches(self, atom):
-        return atom.path in self.TYPE_TRANSLATIONS
+        return atom.path in self.TYPE_TRANSLATIONS and len(atom.mapSpecified) > 1
 
     def Fix(self, atom):
         self.before = str(atom)
@@ -372,3 +372,26 @@ class RenameColorVG(RenameProperty):
 
     def __init__(self):
         RenameProperty.__init__(self, "color", "_color")
+
+@MapFix('vgstation')
+class StandardizeVents(Matcher):
+    RETAIN_PROPERTIES=('dir','frequency')
+    def __init__(self):
+        self.changesMade = []
+        
+    def Matches(self, atom):
+        return atom.path == ATMOSBASE + '/unary/vent_pump' and atom.getProperty('frequency') == 1439
+    
+    def Fix(self, atom):
+        for key in list(atom.mapSpecified):
+            if key in self.RETAIN_PROPERTIES: continue
+            atom.mapSpecified.remove(key)
+            self.changesMade += [key]
+        atom.setProperty('on',1, PropertyFlags.MAP_SPECIFIED)
+        return atom
+
+    def __str__(self):
+        if len(self.changesMade) == 0:
+            return "Standardize vents"
+        else:
+            return 'Standardized vent (removed ' + ', '.join(self.changesMade) + '; set on = 1)'
