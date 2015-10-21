@@ -102,5 +102,5 @@ if os.path.isfile(args.project):
                 continue
             
             opt.set_defaults(project=args.project,map=args.map)
-            line_args=opt.parse_args(line)
+            line_args=opt.parse_args(opt.convert_arg_line_to_args(line))
             DoRender(dmm, line_args)
