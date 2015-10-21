@@ -96,11 +96,14 @@ if os.path.isfile(args.project):
     if args.script is None:
         DoRender(dmm, args)
     else:
+        ln=0
         for line in args.script:
+            ln+=1
             line=line.strip()
             if line=='' or line.startswith('#'):
                 continue
             
-            opt.set_defaults(project=args.project,map=args.map)
-            line_args=opt.parse_args(opt.convert_arg_line_to_args(line))
+            #opt.set_defaults(project=args.project,map=args.map)
+            logging.info('Executing script: '+line)
+            line_args=opt.parse_args([args.project,args.map]+opt.convert_arg_line_to_args(line))
             DoRender(dmm, line_args)
