@@ -185,6 +185,7 @@ class DMMFormat(BaseMapFormat):
                 # if((index % 100) == 0):
                 #   print(index)
             else:
+                self.log.info('TILEDEFS END AT LINE {}'.format(self.lineNumber))
                 self.log.info('{} tiles loaded, {} duplicates discarded'.format(index, self.duplicates))
                 return 
     
