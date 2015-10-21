@@ -35,7 +35,7 @@ class MapParsingError(Exception):
         self.line=line
         self.message=message
     def __str__(self):
-        return 'MapParsingError ({filename}:{line}): {message}'.format(filename=self.filename,line=self.line,message=self.message)
+        return '({filename}:{line}): {message}'.format(filename=self.filename,line=self.line,message=self.message)
 
 @MapFormat('dmm')
 class DMMFormat(BaseMapFormat):
