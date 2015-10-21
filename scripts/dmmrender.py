@@ -106,4 +106,7 @@ if os.path.isfile(args.project):
             #opt.set_defaults(project=args.project,map=args.map)
             logging.info('Executing script: '+line)
             line_args=opt.parse_args([args.project,args.map]+opt.convert_arg_line_to_args(line))
+            if line_args.areas is not None and not os.path.isfile(line_args.areas):
+                logging.warn('Skipping line: {} not found.'.format(line_args.areas))
+                continue
             DoRender(dmm, line_args)
