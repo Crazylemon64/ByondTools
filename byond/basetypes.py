@@ -40,6 +40,8 @@ _COLOR_LOOKUP = {}
     
 def BYOND2RGBA(colorstring, alpha=255):
     colorstring = colorstring.strip()
+    if colorstring == None or colorstring == '':
+	    return (255, 255, 255, 255) # Edge cases of BYOND2RGBA being passed an incorrect value
     if colorstring[0] == '#': 
         colorstring = colorstring[1:]
         r, g, b = colorstring[:2], colorstring[2:4], colorstring[4:]
