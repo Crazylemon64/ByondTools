@@ -121,7 +121,7 @@ class DMI:
                 icon = Image.open(frame, 'r')
             box = (x * self.icon_width, y * self.icon_height)
             # print('{0} -> ({1},{2}) {3} {4}'.format(f,x,y,box,fdata[f]))
-            sheet.paste(icon, box, icon)
+            sheet.paste(icon, box)
             x += 1
             if x > icons_per_row:
                 y += 1
