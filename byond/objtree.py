@@ -4,12 +4,13 @@ Superficially generate an object/property tree.
 import re, logging, os
 import sre_constants
 from byond.script.dmscript import ParseDreamList
+from future.utils import viewitems
 
 try:
     import cPickle as pickle
 except:
     import pickle
-   
+
 from .basetypes import Atom, Proc, BYONDValue, BYONDString, BYONDFileRef, BYONDList
 from .utils import md5sum, get_stdlib
 
@@ -21,11 +22,11 @@ REGEX_LINE_COMMENT = re.compile('//.*?$')
 
 def debug(filename, line, path, message):
     print('{0}:{1}: {2} - {3}'.format(filename, line, '/'.join(path), message))
-    
+
 class OTRCache:
     #: Only used for obliterating outdated data.
     VERSION = [18, 6, 2014]
-    
+
     def __init__(self, filename):
         self.filename = filename
         self.files = {}
@@ -43,7 +44,7 @@ class OTRCache:
     def StopReading(self):
         if self.handle is not None:
             self.handle.close()
-        
+
     def CheckVersion(self):
         # print('READ VERSION')
         # Block 1: Version
@@ -51,16 +52,16 @@ class OTRCache:
             self.log.warn('!!! Outdated OTR data, rebuilding.')
             return False
         return True
-    
+
     def ReadFiles(self):
         # print('READ FILES')
         # Block 2: Files
         self.files = pickle.load(self.handle)
-    
+
     def ReadAtoms(self):
         # print('READ ATOMS')
         return pickle.load(self.handle)
-        
+
     def CheckFileHash(self, fn, md5):
         # print('{0}: {1}'.format(fn,md5))
         if fn not in self.files:
@@ -70,19 +71,19 @@ class OTRCache:
             self.log.info(' * {0}'.format(fn))
             return False
         return True
-    
+
     def PruneFiles(self, file_list):
         for fn in self.files.keys():
             if fn not in file_list:
                 self.files -= [fn]
                 self.log.info(' - {0}'.format(fn))
-        
+
     def SetFileMD5(self, fn, md5):
         self.files[fn] = md5
-        
+
     def GetFiles(self):
         return self.files.keys()
-        
+
     def Save(self, atoms):
         with open(self.filename, 'w') as f:
             pickle.dump(self.VERSION, f)
@@ -98,13 +99,13 @@ class ObjectTree:
     def __init__(self, **options):
         # : All atoms, in a list.
         self.Atoms = {}
-        
+
         # : All atoms, in a tree-node structure.
         self.Tree = Atom('')
-        
+
         # : Skip loading from .OTR?
         self.skip_otr = False
-        
+
         self.LoadedStdLib = False
         self.cpath = []
         self.popLevels = []
@@ -123,25 +124,25 @@ class ObjectTree:
         self.comments = []
         self.fileLayouts = {}
         self.LeavePreprocessorDirectives = options.get('preprocessor_directives', False)
-        
+
         nit = self.ignoreTokens.copy()
-        for _, stop in self.ignoreTokens.iteritems():
+        for _, stop in viewitems(self.ignoreTokens):
             nit[stop] = None
         self.ignoreTokens = nit
-        
+
         self.defines['__OBJTREE'] = BYONDValue('1')
-        
+
         self.log = logging.getLogger(self.__class__.__name__)
-    
+
     def ProcessMultiString(self, filename, line, ignoreLevels, current_buffer):
         return '"{0}"'.format(current_buffer)
-    
+
     def SplitPath(self, string):
         o = []
         buf = []
         inProc = False
         for chunk in string.split('/'):
-            if not inProc: 
+            if not inProc:
                 if '(' in chunk and ')' not in chunk:
                     inProc = True
                     buf += [chunk]
@@ -154,12 +155,12 @@ class ObjectTree:
                 else:
                     buf += [chunk]
         return o
-        
+
     def ProcessFilesFromDME(self, dmefile='baystation12.dme', ext='.dm', **kwargs):
         changed_files = 0
         rootdir = os.path.dirname(dmefile)
         projectfile = os.path.join(rootdir, os.path.basename(dmefile).replace('.dme', '.otr'))
-        
+
         cache = OTRCache(projectfile)
         invalid = False
         if not self.skip_otr:
@@ -172,7 +173,7 @@ class ObjectTree:
                     invalid = True
             else:
                 invalid = True
-                
+
         ToRead = []
         if not self.LoadedStdLib and kwargs.get('load_stdlib', True):
             stdlib_dir = get_stdlib()
@@ -194,7 +195,7 @@ class ObjectTree:
                             if
                             escaped = False
                             continue
-                        """         
+                        """
                         if c == '"':
                             inString = not inString
                             if not inString:
@@ -206,7 +207,7 @@ class ObjectTree:
                         else:
                             if inString:
                                 filename += c
-        
+
         for filepath in ToRead:
             md5 = md5sum(filepath)
             if invalid or not cache.CheckFileHash(filepath, md5):
@@ -228,19 +229,19 @@ class ObjectTree:
             self.Atoms = cache.ReadAtoms()
             cache.StopReading()
             self.MakeTree()
-            
+
     def DetermineContext(self, filename, ln, line, numtabs, atom_prefix=[]):
         '''
         Spit out the full path of the atom we're currently in.
-        
+
         Does NOT update internal positioning.  Think peek.
         '''
         if numtabs == 0:
             return None  # Global context
-            
+
         elif numtabs > self.pindent:
             return '/'.join(self.cpath + atom_prefix)
-            
+
         elif numtabs < self.pindent:
             cpath_copy = list(self.cpath)
             for _ in range(self.pindent - numtabs + 1):
@@ -249,7 +250,7 @@ class ObjectTree:
                     cpath_copy.pop()
             cpath_copy += atom_prefix
             return '/'.join(cpath_copy)
-            
+
         elif numtabs == self.pindent:
             cpath_copy = list(self.cpath)
             levelsToPop = self.popLevels.pop()
@@ -257,23 +258,23 @@ class ObjectTree:
                 cpath_copy.pop()
             cpath_copy += atom_prefix
             return '/'.join(cpath_copy)
-        
-            
+
+
     def ProcessAtom(self, filename, ln, line, atom, atom_path, numtabs, procArgs=None):
         # Reserved words that show up on their own
         if atom in ObjectTree.reserved_words:
             return
-        
+
         # Other things to ignore (false positives, comments)
         if atom.startswith('var/') or atom.startswith('//'):
             return
-        
+
         # Things part of a string or list.
         if numtabs > 0 and atom.strip().startswith('/'):
             return
 
         if self.debugOn: self.log.debug('{} > {}'.format(numtabs, line.rstrip()))
-        
+
         if numtabs == 0:
             self.cpath = atom_path
             if len(self.cpath) == 0:
@@ -282,12 +283,12 @@ class ObjectTree:
                 self.cpath.insert(0, '')
             self.popLevels = [len(self.cpath)]
             if self.debugOn: debug(filename, ln, self.cpath, '0 - ' + repr(atom_path))
-            
+
         elif numtabs > self.pindent:
             self.cpath += atom_path
             self.popLevels += [len(atom_path)]
             if self.debugOn: debug(filename, ln, self.cpath, '>')
-            
+
         elif numtabs < self.pindent:
             if self.debugOn: self.log.debug('({} - {})={}: {}'.format(self.pindent, numtabs, self.pindent - numtabs, repr(self.cpath)))
             for _ in range(self.pindent - numtabs + 1):
@@ -299,7 +300,7 @@ class ObjectTree:
             self.cpath += atom_path
             self.popLevels += [len(atom_path)]
             if self.debugOn: debug(filename, ln, self.cpath, '<')
-            
+
         elif numtabs == self.pindent:
             levelsToPop = self.popLevels.pop()
             for i in range(levelsToPop):
@@ -308,23 +309,23 @@ class ObjectTree:
             self.popLevels += [len(atom_path)]
             if self.debugOn: self.log.debug('popLevels: ' + repr(self.popLevels))
             if self.debugOn: debug(filename, ln, self.cpath, '==')
-            
+
         origpath = '/'.join(self.cpath)
         # print(npath)
-        
+
         # definition?
         defs = []
-        
+
         # Trim off /proc or /var, if needed.
         prep_path = list(self.cpath)
-        
+
         for special in ['proc']:
             if special in prep_path:
                 defs += [special]
                 prep_path.remove(special)
-        
+
         npath = '/'.join(prep_path)
-        
+
         if npath not in self.Atoms:
             if procArgs is not None:
                 assert npath.endswith(')')
@@ -339,7 +340,7 @@ class ObjectTree:
             # if self.debugOn: print('Added ' + npath)
         self.pindent = numtabs
         return self.Atoms[npath]
-    
+
     def AddCodeToProc(self, startIndent, code):
         if '\n' in code:
             for line in code.split('\n'):
@@ -351,7 +352,7 @@ class ObjectTree:
             i = max(1, numtabs - startIndent)
             # self.loadingProc.AddCode(i, '/* {0} */ {1}'.format(i,code.strip()))
             self.loadingProc.AddCode(i, code.rstrip())
-            
+
     def finishComment(self, line, **args):
         self.comments += [self.comment]
         self.fileLayout += [('COMMENT', len(self.comments) - 1)]
@@ -359,17 +360,17 @@ class ObjectTree:
         if self.loadingProc is not None and (args.get('cleansed_line', '') == '' and not self.comment.strip().startswith('//')):
             self.AddCodeToProc(self.ignoreStartIndent, self.comment)
         self.comment = ''
-        
+
     def handleOBToken(self, name, context, params):
         if context is not None:
             context = self.Atoms[context]
         name = 'ob_{0}'.format(name.lower())
         getattr(self, name)(context, *params)
-        
+
     def NewProcessFile(self, filename):
         '''SOON'''
         return
-        
+
     def ProcessFile(self, filename):
         self.cpath = []
         self.popLevels = []
@@ -386,13 +387,13 @@ class ObjectTree:
         with open(filename, 'r') as f:
             ln = 0
             ignoreLevel = []
-            
+
             for line in f:
                 ln += 1
 
                 skipNextChar = False
                 nl = ''
-                    
+
                 line = line.rstrip()
                 self.lineBeforePreprocessing = line
                 line_len = len(line)
@@ -448,24 +449,24 @@ class ObjectTree:
                         nl += c
                     else:
                         self.comment += c
-                        
+
                 if line != nl:
                     if self.ignoreDebugOn: self.log.debug('IN : ' + line)
                     line = nl
                     if self.ignoreDebugOn: self.log.debug('OUT: ' + line)
                     if self.ignoreDebugOn: self.log.debug('self.comment = {}.'.format(repr(self.comment)))
-                    
+
                 if len(ignoreLevel) > 0:
                     self.comment += "\n"
                     continue
-                
+
                 line = REGEX_LINE_COMMENT.sub('', line)
-                
+
                 if line.strip() == '':
                     if self.loadingProc is not None:
                         self.loadingProc.AddBlankLine()
                     continue
-                
+
                 # Preprocessing defines.
                 if line.strip().startswith("#"):
                     if line.endswith('\\'): continue
@@ -480,11 +481,11 @@ class ObjectTree:
                         elif len(defineChunks) == 3:
                             defineChunks[2] = self.PreprocessLine(defineChunks[2])
                         # print(repr(defineChunks))
-                        
+
                         # TODO: We don't know how to handle parameterized macros yet.
                         if '(' in defineChunks[1]:
                             continue
-                        
+
                         try:
                             if '.' in defineChunks[2]:
                                 self.defines[defineChunks[1]] = BYONDValue(float(defineChunks[2]), filename, ln)
@@ -498,7 +499,7 @@ class ObjectTree:
                         if undefChunks[1] in self.defines:
                             del self.defines[undefChunks[1]]
                         self.fileLayout += [('UNDEF', undefChunks[1])]
-                    
+
                     # OpenBYOND tokens.
                     elif directive.startswith('__OB_'):
                         numtabs = 0
@@ -516,10 +517,10 @@ class ObjectTree:
                         self.fileLayout += [('PP_TOKEN', line)]
                         self.log.warn('BUG: Unhandled preprocessor directive #{} in {}:{}'.format(directive, filename, ln))
                     continue
-                
+
                 # Preprocessing
                 line = self.PreprocessLine(line)
-                
+
                 m = REGEX_TABS.match(self.lineBeforePreprocessing)
                 if m is not None:
                     numtabs = len(m.group('tabs'))
@@ -537,7 +538,7 @@ class ObjectTree:
                     if self.debugOn and self.ignoreStartIndent > -1: self.log.debug('BREAK ' + line)
                     self.ignoreStartIndent = -1
                     self.loadingProc = None
-                
+
                 if not line.strip().startswith('var/'):
                     m = REGEX_ATOMDEF.match(line)
                     if m is not None:
@@ -548,11 +549,11 @@ class ObjectTree:
                         if atom is None: continue
                         self.fileLayout += [('ATOMDEF', atom.path)]
                         continue
-                    
+
                     m = REGEX_ABSOLUTE_PROCDEF.match(line)
                     if m is not None:
                         numtabs = len(m.group('tabs'))
-                        atom = '{0}/{1}({2})'.format(m.group('atom'), m.group("proc"), m.group('args')) 
+                        atom = '{0}/{1}({2})'.format(m.group('atom'), m.group("proc"), m.group('args'))
                         atom_path = self.SplitPath(atom)
                         # print('PROCESSING ABS PROC AT INDENT > ' + str(numtabs) + " " + atom+" -> "+repr(atom_path))
                         proc = self.ProcessAtom(filename, ln, line, atom, atom_path, numtabs, m.group('args').split(','))
@@ -562,11 +563,11 @@ class ObjectTree:
                         self.loadingProc.ClearCode()
                         self.fileLayout += [('PROCDEF', proc.path)]
                         continue
-                    
+
                     m = REGEX_RELATIVE_PROCDEF.match(line)
                     if m is not None:
                         numtabs = len(m.group('tabs'))
-                        atom = '{}({})'.format(m.group("proc"), m.group('args')) 
+                        atom = '{}({})'.format(m.group("proc"), m.group('args'))
                         atom_path = self.SplitPath(atom)
                         # print('IGNORING RELATIVE PROC AT INDENT > ' + str(numtabs) + " " + line)
                         proc = self.ProcessAtom(filename, ln, line, atom, atom_path, numtabs, m.group('args').split(','))
@@ -576,7 +577,7 @@ class ObjectTree:
                         self.loadingProc.ClearCode()
                         self.fileLayout += [('PROCDEF', proc.path)]
                         continue
-                
+
                 path = '/'.join(self.cpath)
                 # if len(self.cpath) > 0 and 'proc' in self.cpath:
                 #    continue
@@ -589,12 +590,12 @@ class ObjectTree:
                     self.Atoms[path].properties[name] = prop
                     self.fileLayout += [('VAR', path, name)]
         self.fileLayouts[filename] = self.fileLayout
-        
+
     def consumeVariable(self, line, filename, ln):
         declaration = False
         value = None
         size = None
-        
+
         decl = ''
         if self.LeavePreprocessorDirectives:
             line = decl = self.lineBeforePreprocessing.strip()
@@ -615,7 +616,7 @@ class ObjectTree:
                     pass
             # print(repr({'size':size,'line':line_split}))
             line = line_split
-            
+
         if '=' in line:
             decl, value = line.split('=', 1)
             decl = decl.strip()
@@ -624,7 +625,7 @@ class ObjectTree:
             decl = line.strip()
             value = None
         # print(repr({'decl':decl,'value':value}))
-            
+
         # (var)(/global|const|tmp)(/type/fragment)name
         if decl.startswith('var/'):
             declaration = True
@@ -637,16 +638,16 @@ class ObjectTree:
             if pathchunks[0] in ('tmp', 'global', 'const'):
                 special = pathchunks[0]
                 pathchunks = pathchunks[1:]
-                
+
             if name.endswith(']'):
                 name = name[:name.index('[')]
                 if size is None:
                     size = -1
-                
+
             if 'list' not in pathchunks and size is not None:
                 pathchunks = ['list'] + pathchunks
             typepath = '/' + '/'.join(pathchunks[:-1])
-            
+
         kwargs = {
             'declaration':declaration,
             'special':special,
@@ -670,7 +671,7 @@ class ObjectTree:
         elif value == 'null':
             return (name, BYONDValue(None, filename, ln, typepath, **kwargs))
         return (name, BYONDValue(value, filename, ln, typepath, **kwargs))
-        
+
     def MakeTree(self):
         self.log.info('Generating Tree...')
         self.Tree = Atom('/')
@@ -705,11 +706,11 @@ class ObjectTree:
         self.Tree.InheritProperties()
         self.log.info('Processed {0} atoms.'.format(len(self.Atoms)))
         # self.Atoms = {}
-        
+
     def GetAtom(self, path):
         if path in self.Atoms:
             return self.Atoms[path]
-        
+
         cpath = []
         cNode = self.Tree
         fullpath = path.split('/')
@@ -724,7 +725,7 @@ class ObjectTree:
         # print('Found {0}!'.format(path))
         self.Atoms[path] = cNode
         return cNode
-        
+
 
     def PreprocessLine(self, line):
         for key, define in self.defines.items():

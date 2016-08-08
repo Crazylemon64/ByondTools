@@ -5,3 +5,5 @@
 /BYONDTools.egg-info
 /build
 /dist
+/.cache
+pyunit-*.xml
