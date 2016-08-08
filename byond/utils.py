@@ -52,7 +52,7 @@ class TimeExecution(object):
         logging.info('  Completed in {1}s - {0}'.format(self.label, secondsToStr(clock() - self.start_time)))
         return False
 
-class ProfilingTarget:
+class ProfilingTarget(object):
     def __init__(self, name):
         self.name = name
         self.calls = 0
@@ -74,7 +74,7 @@ class ProfilingTarget:
     def ToCSV(self):
         return "{},{},{},{}".format(self.name, self.calls, getElapsed(self.elapsed), getElapsed(self.elapsed / self.calls))
     
-class Profiler:
+class Profiler(object):
     def __init__(self):
         self.targets = {}
 

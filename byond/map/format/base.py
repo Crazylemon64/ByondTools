@@ -16,20 +16,20 @@ class MapFormat(object):
             _log.warn('*.{} FILES ARE ALREADY HANDLED BY {}!'.format(self.extension,self.id))
         MapFormat.all[self.extension] = c
         return c
-    
+
 def GetMapFormat(_map,ext):
     f = MapFormat.all.get(ext.strip('.'),None)
     if f is None:
         _log.error('Unable to find MapFormat for {}.'.format(ext))
     return f(_map)
-    
-class BaseMapFormat:
+
+class BaseMapFormat(object):
     def __init__(self, _map):
         self.map = _map
         self.missing_atoms = set()
-        
+
     def Load(self, filename, **kwargs):
         return
-    
+
     def Save(self, filename, **kwargs):
         return

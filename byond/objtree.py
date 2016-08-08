@@ -24,7 +24,7 @@ REGEX_LINE_COMMENT = re.compile('//.*?$')
 def debug(filename, line, path, message):
     print('{0}:{1}: {2} - {3}'.format(filename, line, '/'.join(path), message))
 
-class OTRCache:
+class OTRCache(object):
     #: Only used for obliterating outdated data.
     VERSION = [18, 6, 2014]
 
@@ -91,7 +91,7 @@ class OTRCache:
             pickle.dump(self.files, f)
             pickle.dump(atoms, f)
 
-class ObjectTree:
+class ObjectTree(object):
     reserved_words = ('else', 'break', 'return', 'continue', 'spawn')  # , 'proc')
     stdlib_files = (
         'dm_std.dm',

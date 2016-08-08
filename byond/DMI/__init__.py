@@ -10,12 +10,12 @@ from future.utils import viewitems
 from byond.DMIH import *
 from .State import State
 
-class DMILoadFlags:
+class DMILoadFlags(object):
     NoImages = 1
     NoPostProcessing = 2
 
 
-class DMI:
+class DMI(object):
     MovementTag = '\t'
     def __init__(self, filename):
         self.filename = filename

@@ -2,7 +2,7 @@ from byond import directions
 from PIL import Image
 import logging
 
-class State:
+class State(object):
     # So we don't overwrite the static state.
     MovementTag = 'M'
     def __init__(self, nm):

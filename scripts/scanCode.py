@@ -3,7 +3,7 @@ import sys, re
 from byond.basetypes import Proc
 from byond.objtree import ObjectTree
 
-class CodeScan:
+class CodeScan(object):
     def __init__(self, id):
         self.id = id
         self.atom = None

@@ -38,7 +38,7 @@ def DeclareDependencies(dependee, dependencies):
 def GetDependencies():
     return _dependencies
 
-class Matcher:
+class Matcher(object):
     def Matches(self, atom):
         return False
 

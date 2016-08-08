@@ -5,7 +5,7 @@ Created with help from tobba.
 """
 import logging, struct
 
-class NetTypes:
+class NetTypes(object):
     BYTE = 0
     SHORT = 1
     LONG = 2
@@ -19,7 +19,7 @@ class NetTypes:
 
 PacketTypes = {}
 
-class Packet:
+class Packet(object):
     ID = 0
     Name = ''
     def __init__(self):

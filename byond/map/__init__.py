@@ -53,7 +53,7 @@ def trim(im):
 def tint_image(image, tint_color):
     return ImageChops.multiply(image, Image.new('RGBA', image.size, tint_color))
 
-class LocationIterator:
+class LocationIterator(object):
     def __init__(self, _map):
         self.map = _map
         self.x = -1
@@ -88,7 +88,7 @@ class LocationIterator:
         # print('{} = {}'.format((self.x,self.y,self.z),str(t)))
         return t
 
-class TileIterator:
+class TileIterator(object):
     def __init__(self, _map):
         self.map = _map
         self.pos = -1
@@ -110,7 +110,7 @@ class TileIterator:
         #print('#{} = {}'.format(self.pos,str(t)))
         return t
 
-class AtomIterator:
+class AtomIterator(object):
     def __init__(self, _map):
         self.map = _map
         self.pos = -1
@@ -383,7 +383,7 @@ class Tile(object):
 
         return img
 
-class MapLayer:
+class MapLayer(object):
     def __init__(self, z, _map, height=255, width=255):
         self.initial_load=False
         self.map = _map
@@ -466,11 +466,11 @@ class MapLayer:
 
         # self.tiles = [[Tile(self.map) for _ in range(width)] for _ in range(height)]
 
-class MapRenderFlags:
+class MapRenderFlags(object):
     RENDER_STARS = 1
     RENDER_AREAS = 2
 
-class Map:
+class Map(object):
     def __init__(self, tree=None, **kwargs):
         self.zLevels = []
 
