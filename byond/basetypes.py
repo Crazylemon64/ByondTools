@@ -3,9 +3,12 @@ Created on Nov 6, 2013
 
 @author: Rob
 '''
+from __future__ import print_function
+
 import re, hashlib, collections
 from .utils import eval_expr
 
+from future.utils import viewkeys
 
 # import logging
 AREA_LAYER = 1
@@ -374,7 +377,7 @@ class Atom(object):
                     # if debugInheritance:print('  {0}[{2}] -> {1}'.format(self.parent.path,self.path,key))
         # assert 'name' in self.properties
         self.ob_inherited = True
-        for k in self.children.iterkeys():
+        for k in viewkeys(self.children):
             self.children[k].InheritProperties()
 
     def __ne__(self, atom):

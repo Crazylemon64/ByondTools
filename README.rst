@@ -15,9 +15,10 @@ maps, and DMIs.
 Requirements
 ------------
 
-* Python 2.7+
+* Python 2.7+/3.5+
 * Pillow (fork of PIL)
 * numpy
+* python-future
 
 Use
 ---
@@ -42,5 +43,5 @@ API Status
 Support
 -------
 
-No commercial or official support is provided, but you are free to 
+No commercial or official support is provided, but you are free to
 submit bug reports or harass N3X15 in irc.rizon.net #vgstation.

@@ -5,6 +5,7 @@ import re, logging, os
 import sre_constants
 from byond.script.dmscript import ParseDreamList
 from future.utils import viewitems
+from builtins import range
 
 try:
     import cPickle as pickle
@@ -397,7 +398,7 @@ class ObjectTree:
                 line = line.rstrip()
                 self.lineBeforePreprocessing = line
                 line_len = len(line)
-                for i in xrange(line_len):
+                for i in range(line_len):
                     c = line[i]
                     nc = ''
                     if line_len > i + 1:

@@ -23,40 +23,44 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 """
+from __future__ import print_function
+
 import sys, argparse, os, re
 from byond import ObjectTree, Map, MapRenderFlags
 from byond.basetypes import Atom, PropertyFlags
 from byond.map.format.dmm import DMMFormat
 
+from builtins import range
+
 def main():
     dmmt = DMMFormat(None)
     opt = argparse.ArgumentParser()  # version='0.1')
     opt.add_argument('--project', default='baystation12.dme', type=str, help='Project file.', metavar='environment.dme')
-    
+
     command = opt.add_subparsers(help='The command you wish to execute', dest='MODE')
-    
+
     _compare = command.add_parser('diff', help='Compare two map files and generate a map patch.')
     _compare.add_argument('-O', '--output', dest='output', type=str, help='The other side.', metavar='mine.dmdiff', nargs='?')
     _compare.add_argument('theirs', type=str, help='One side of the difference', metavar='theirs.dmm')
     _compare.add_argument('mine', type=str, help='The other side.', metavar='mine.dmm')
-    
+
     _transcribe = command.add_parser('transcribe', help='Re-write a map file (used for parser debugging).')
     _transcribe.add_argument('-O', '--output', dest='output', type=str, help='The other side.', metavar='map.trans.dmm', nargs='?')
     _transcribe.add_argument('subject', type=str, help='Map file to re-write.', metavar='map.dmm')
-    
+
     _patch = command.add_parser('patch', help='Apply a map patch.')
     _patch.add_argument('-O', '--output', dest='output', type=str, help='Where to place the patched map. (Default is to overwrite input map)', metavar='mine.dmdiff', nargs='?')
     _patch.add_argument('--clobber', dest='clobber', action="store_true", help='Overwrite conflicts')
     _patch.add_argument('patches', action='append', nargs='+', help='Patch(es) to apply.', metavar='patch.dmmpatch')
     _patch.add_argument('map', type=str, help='The map to change.', metavar='map.dmm')
-    
+
     _analyze = command.add_parser('analyze', help='Generate a report of each atom on a map.  WARNING: huge')
     _analyze.add_argument('map', type=str, help='Map to analyze.', metavar='map.dmm')
-    
+
     _split = command.add_parser('split', help='Split up a map by z-level.')
     #_split.add_argument('-i','--isolate', help='Isolate a given z-level', metavar='NUM')
     _split.add_argument('map', type=str, help='Map to split.', metavar='map.dmm')
-    
+
     args = opt.parse_args()
     if args.MODE == 'diff':
         compare_dmm(args)
@@ -70,7 +74,7 @@ def main():
         transcribe_dmm(args)
     else:
         print('!!! Error, unknown MODE=%r' % args.MODE)
-        
+
 def transcribe_dmm(args):
     if not os.path.isfile(args.subject):
         print('File {0} does not exist.'.format(args.subject))
@@ -78,13 +82,13 @@ def transcribe_dmm(args):
     if not os.path.isfile(args.project):
         print('DM Environment File {0} does not exist.'.format(args.project))
         sys.exit(1)
-    
+
     dmm = Map(forgiving_atom_lookups=True)
     basename,ext = os.path.splitext(args.subject)
     outfile='{0}.trans{1}'.format(basename,ext)
     dmm.Load(args.subject, format='dmm')
     dmm.Save(outfile, format='dmm', serialize_cleanly=True)
-        
+
 def split_dmm(args):
     if not os.path.isfile(args.map):
         print('File {0} does not exist.'.format(args.mine))
@@ -92,12 +96,12 @@ def split_dmm(args):
     if not os.path.isfile(args.project):
         print('DM Environment File {0} does not exist.'.format(args.project))
         sys.exit(1)
-    
+
     dmm = Map(forgiving_atom_lookups=True)
     dmm.Load(args.map, format='dmm')
-    
+
     #fmt = DMMFormat(dmm)
-    
+
     nz = len(dmm.zLevels)
     for z in range(nz):
         basename,ext = os.path.splitext(args.map)
@@ -128,30 +132,30 @@ def patch_dmm(args):
     if not os.path.isfile(args.project):
         print('DM Environment File {0} does not exist.'.format(args.project))
         sys.exit(1)
-        
+
     dmm = Map(forgiving_atom_lookups=True)
     dmm.Load(args.map, format='dmm')
-    
+
     fmt = DMMFormat(dmm)
 
     context = None
     added = 0
     removed = 0
-    
+
     currentpatch = ''
-    
+
     def changeMarker(ln):
         a = Atom('/obj/effect/byondtools/changed')
         a.setProperty('tag','{}:{}'.format(currentpatch,ln),flags=PropertyFlags.MAP_SPECIFIED)
         return a
-    
+
     def printReport(context, added, removed):
         if context is not None:
             x, y, z = context
             print(' Z={} +{} -{}'.format(z, added, removed))
-    
+
     REG_INSTRUCTION = re.compile(r'^(?P<change>[\+\-])(?P<amount>[0-9\*]+)?\s+(?P<atom>/.*)')
-    
+
     for i in range(len(args.patches[0])):
         patch=args.patches[0][i]
         print('* Applying {}...'.format(patch))
@@ -179,12 +183,12 @@ def patch_dmm(args):
                     continue
                 if line.startswith('@') and not skip_block:
                     # @CHECK before-hash after-hash atoms-block
-    
+
                     x, y, z = context
-                    
+
                     if line.startswith('@CHECK'):
                         _, beforehash, afterhash, serdata = line.split(' ', 3)
-                        
+
                         if args.clobber:
                             #print('WARNING: <{},{},{}> has changed and will be overwritten. (--clobber)'.format(x, y, z))
                             t=fmt.consumeTileChunk(serdata, cache=False)
@@ -202,7 +206,7 @@ def patch_dmm(args):
                             print('WARNING: <{},{},{}> has changed.  Operations on this tile may not be accurate!'.format(x, y, z))
                             continue
                         #else: print('OLD {} == {}: OK'.format(curhash,beforehash))
-                              
+
                 if not skip_block and (line.startswith('+') or line.startswith('-')):
                     if line == '-ALL':
                         dmm.SetTileAt(x, y, z, dmm.CreateTile())
@@ -217,20 +221,20 @@ def patch_dmm(args):
                     else:
                         amount = int(m.group('amount') or 1)
                     change = m.group('change')
-                    
+
                     atom = fmt.consumeAtom(m.group('atom'), ln)
                     atom.filename = args.patch
                     atom.line = ln
                     if atom is None:
                         print('{}:{}: WARNING: Unable to parse instance specified by chunk {}'.format(args.patch, ln, m.group('atom')))
                         continue
-    
+
                     x, y, z = context
                     if x == 0 and y == 0 and z == 0:
                         print('WE AT <0,0,0> SOMEFIN WRONG')
-                        
+
                     if z >= len(dmm.zLevels): continue
-                    
+
                     tile = dmm.GetTileAt(x, y, z)
                     if change == '-':
                         for _ in range(amount):
@@ -246,10 +250,10 @@ def patch_dmm(args):
                     # dmm.SetTileAt(x, y, z, tile)
                     # print('{} - {}'.format((x,y,z),tile))
             printReport(context, added, removed)
-    
+
     print('Saving...')
     dmm.Save(args.output if args.output else args.map)
-    
+
 def compare_dmm(args):
     if not os.path.isfile(args.theirs):
         print('File {0} does not exist.'.format(args.theirs))
@@ -260,20 +264,20 @@ def compare_dmm(args):
     if not os.path.isfile(args.project):
         print('DM Environment File {0} does not exist.'.format(args.project))
         sys.exit(1)
-        
+
     theirs_dmm = Map(forgiving_atom_lookups=True)
     theirs_dmm.Load(args.theirs, format='dmm')
-    
+
     mine_dmm = Map(forgiving_atom_lookups=True)
     mine_dmm.Load(args.mine, format='dmm')
-    
+
     ttitle, _ = os.path.splitext(os.path.basename(args.theirs))
     mtitle, _ = os.path.splitext(os.path.basename(args.mine))
-    
+
     format = DMMFormat(theirs_dmm)
-    
+
     output = '{} - {}.dmmpatch'.format(ttitle, mtitle)
-    
+
     if args.output:
         output = args.output
     with open(output, 'w') as f:
@@ -284,7 +288,7 @@ def compare_dmm(args):
             'atoms':0
         }
         print('Comparing maps...')
-        for z in xrange(len(theirs_dmm.zLevels)):
+        for z in range(len(theirs_dmm.zLevels)):
             t_zlev = theirs_dmm.zLevels[z]
             m_zlev = mine_dmm.zLevels[z]
             if t_zlev.height != m_zlev.height or t_zlev.width != m_zlev.width:
@@ -294,7 +298,7 @@ def compare_dmm(args):
             for y in range(t_zlev.height):
                 for x in range(t_zlev.width):
                     CHANGES = {}
-                    
+
                     tTile = theirs_dmm.GetTileAt(x, y, z)
                     # if tTile is None:
                     #    print('!!! THEIRS <{},{},{}>: Tile object is None!'.format(x, y, z))
@@ -303,11 +307,11 @@ def compare_dmm(args):
                     # if tTile is None:
                     #    print('!!! MINE <{},{},{}>: Tile object is None!'.format(x, y, z))
                     #    #return
-                    
+
                     theirs = {}
                     mine = {}
                     all_keys = set()
-                    
+
                     if tTile:
                         for A in tTile.GetAtoms():
                             key = format.SerializeAtom(A)
@@ -326,7 +330,7 @@ def compare_dmm(args):
                     removals = set()
                     additions = set()
                     kept = {}
-                    
+
                     for key in all_keys:
                         change = None
                         minecount = 0
@@ -347,7 +351,7 @@ def compare_dmm(args):
                         if change is not None:
                             CHANGES[key] = [change, abs(delta), minecount, theircount]
                         stats['tiles'] += 1
-                    
+
                     def writeChanges(f, source, CHANGES):
                         for key in source:
                             change, amount, mc, tc = CHANGES[key]
@@ -359,7 +363,7 @@ def compare_dmm(args):
                             else:
                                 f.write(' {} {}\n'.format(change, key))
                             stats['diffs'] += abs_amt
-                            
+
                     if len(CHANGES) > 0:
                         f.write('<{},{},{}>\n'.format(x, y, z))
                         stats['tilediffs'] += 1
@@ -396,7 +400,7 @@ def analyze_dmm(args):
     </body>
 </html>
     '''
-    
+
     presentable_attributes = [
         'path',
         'id',
@@ -425,31 +429,31 @@ def analyze_dmm(args):
     tree.ProcessFilesFromDME(args.project)
     dmm = Map(tree)
     dmm.readMap(args.map)
-    
+
     basedir = os.path.join(os.path.dirname(args.project), 'analysis', os.path.basename(args.map))
-    
+
     if not os.path.isdir(basedir):
         os.makedirs(os.path.join(basedir, 'instances'))
         os.makedirs(os.path.join(basedir, 'tiles'))
-    
+
     # Dump instances
     instance_info = {}
     for atom in dmm.instances:
         if atom.path not in instance_info:
             instance_info[atom.path] = []
         instance_info[atom.path] += [atom.ID]
-        
+
         with open(os.path.join(basedir, 'instances', str(atom.ID) + '.html'), 'w') as f:
             body = '<h2>Atom Data:</h2><table class="prettytable"><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody>'
-            for attr in presentable_attributes: 
+            for attr in presentable_attributes:
                 body += '<tr><th>{0}</th><td>{1}</td></tr>'.format(attr, getattr(atom, attr, None))
             body += '</tbody></table>'
-            
+
             body += '<h2>Map-Specified Properties:</h2><table class="prettytable"><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody>'
             for attr_name in atom.mapSpecified:
                 body += '<tr><th>{0}</th><td>{1}</td></tr>'.format(attr_name, atom.getProperty(attr_name, None))
             body += '</tbody></table>'
-            
+
             body += '<h2>All Properties:</h2><table class="prettytable"><thead><tr><th>Name</th><th>Value</th><th>File/Line</th></tr></thead><tbody>'
             for attr_name in sorted(atom.properties.keys()):
                 attr = atom.properties[attr_name]
@@ -465,7 +469,7 @@ def analyze_dmm(args):
             body += '</ul></li>'
         body += "</ul>"
         idx.write(MakePage(title='Instance Index'.format(atom.ID), depth=1, body=body))
-        
+
     # Tiles
     with open(os.path.join(basedir, 'index.html'), 'w') as f:
         body = '<table class="prettytable"><thead><tr><th>Icon</th><th>ID</th><th>Instances</th></tr></thead><tbody>'
@@ -482,6 +486,6 @@ def analyze_dmm(args):
             img.save(os.path.join(basedir, 'tiles', '{0}.png'.format(tile.ID)), 'PNG')
         body += '</tbody></table>'
         f.write(MakePage(title='Tile Index'.format(atom.ID), depth=0, body=body))
-            
+
 if __name__ == '__main__':
     main()

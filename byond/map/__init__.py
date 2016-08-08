@@ -22,13 +22,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 """
+from __future__ import print_function
 import os, itertools, sys, numpy, logging, hashlib
+
 from byond.map.format import GetMapFormat, Load as LoadMapFormats
 from byond.DMI import DMI
 from byond.directions import SOUTH, IMAGE_INDICES
 from byond.basetypes import Atom, BYONDString, BYONDValue, BYONDFileRef, BYOND2RGBA
 # from byond.objtree import ObjectTree
+
 from PIL import Image, ImageChops
+from builtins import range
 
 # Cache
 _icons = {}
@@ -247,7 +251,7 @@ class Tile(object):
     def __eq__(self, other):
         return other and ((other._hash and self._hash and self._hash == other._hash) or (len(self.instances) == len(other.instances) and self.instances == other.instances))
         # else:
-        #    return all(self.instances[i] == other.instances[i] for i in xrange(len(self.instances)))
+        #    return all(self.instances[i] == other.instances[i] for i in range(len(self.instances)))
 
     def _serialize(self):
         return ','.join([str(i) for i in self.GetAtoms()])
@@ -454,13 +458,13 @@ class MapLayer:
         basetile = self.map.basetile;
         if self.tiles is None:
             self.tiles = numpy.empty((height, width), int)  # object)
-            for y in xrange(height):
-                for x in xrange(width):
+            for y in range(height):
+                for x in range(width):
                     self.SetTile(x, y, basetile)
         else:
             self.tiles.resize(height, width)
 
-        # self.tiles = [[Tile(self.map) for _ in xrange(width)] for _ in xrange(height)]
+        # self.tiles = [[Tile(self.map) for _ in range(width)] for _ in range(height)]
 
 class MapRenderFlags:
     RENDER_STARS = 1
@@ -648,8 +652,8 @@ class Map:
             for z in self.zLevels.keys():
                 f.write('\n(1,1,{0}) = {{"\n'.format(z))
                 zlevel = self.zLevels[z]
-                for y in xrange(zlevel.height):
-                    for x in xrange(zlevel.width):
+                for y in range(zlevel.height):
+                    for x in range(zlevel.width):
                         tile = zlevel.GetTileAt(x, y)
                         if flags & Map.WRITE_OLD_IDS:
                             f.write(tile.origID)
@@ -699,7 +703,7 @@ class Map:
         self._icons = {}
         self._dmis = {}
         self.generatedTexAtlas = True
-        for tid in xrange(len(self.tileTypes)):
+        for tid in range(len(self.tileTypes)):
             tile = self.tileTypes[tid]
             img = Image.new('RGBA', (96, 96))
             tile.offset = (32, 32)

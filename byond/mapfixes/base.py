@@ -3,6 +3,8 @@ Global BYOND fixes and matchers
 
 @author: Rob
 '''
+from __future__ import print_function
+
 import logging
 from byond.basetypes import BYONDString, BYONDValue
 # from byond.directions import *
@@ -24,7 +26,7 @@ class MapFix(object):
             MapFix.all[self.category] = {}
         MapFix.all[self.category][self.id] = c
         return c
-    
+
 _dependencies = {}
 
 def DeclareDependencies(dependee, dependencies):
@@ -32,17 +34,17 @@ def DeclareDependencies(dependee, dependencies):
         _dependencies[dependee] = []
     _dependencies[dependee] += dependencies
     _log.debug('  Dependencies: {}'.format(dependencies))
-    
+
 def GetDependencies():
     return _dependencies
 
 class Matcher:
     def Matches(self, atom):
         return False
-    
+
     def Fix(self, atom):
         return atom
-    
+
     def SetTree(self, tree):
         self.tree = tree
 
@@ -50,14 +52,14 @@ class Matcher:
 class NukeTags(Matcher):
     def __init__(self):
         pass
-    
+
     def Matches(self, atom):
         return 'tag' in atom.properties and 'tag' in atom.mapSpecified
-    
+
     def Fix(self, atom):
         atom.mapSpecified.remove('tag')
         return atom
-    
+
     def __str__(self):
         return 'Removed tag'
 
@@ -65,31 +67,31 @@ class NukeTags(Matcher):
 class NukeMergeMarkers(Matcher):
     def __init__(self):
         pass
-    
+
     def Matches(self, atom):
         return atom.path == '/obj/effect/byondtools/changed'
-    
+
     def Fix(self, atom):
         return None
-    
+
     def __str__(self):
         return 'Removed change marker'
-    
+
 class RenameProperty(Matcher):
     '''
     Generic property renamer.
     '''
-    
+
     def __init__(self, old, new):
         self.old = old
         self.new = new
         self.removed = False
-        
+
     def Matches(self, atom):
         if self.old in atom.properties and self.old in atom.mapSpecified:
             return True
         return False
-    
+
     def Fix(self, atom):
         if self.new not in atom.properties:  # Defer to the correct one if both exist.
             atom.properties[self.new] = atom.properties[self.old]
@@ -101,7 +103,7 @@ class RenameProperty(Matcher):
             atom.mapSpecified.remove(self.old)
         del atom.properties[self.old]
         return atom
-    
+
     def __str__(self):
         if self.removed:
             return 'Removed {0}'.format(self.old)
@@ -114,7 +116,7 @@ class ChangeType(Matcher):
         self.new = new
         self.forcetype = forcetype
         self.fuzzy = fuzzy
-        
+
     def Matches(self, atom):
         matches = False
         if self.fuzzy:
@@ -126,20 +128,20 @@ class ChangeType(Matcher):
         else:
             matches = self.old == atom.path
         if matches:
-            if atom.missing: 
+            if atom.missing:
                 return True
             else:
                 logging.warn('[{}] Found type, but marked not missing: {}'.format(self.__class__.__name__,atom.path))
                 logging.warn('{}:{}: Target type found here'.format(atom.filename, atom.line))
                 return True
         return False
-    
+
     def Fix(self, atom):
         if self.new == '':
             return None
         atom.path = self.new
         return atom
-    
+
     def __str__(self):
         return 'Change type from {0} to {1}'.format(self.old, self.new)
 
@@ -147,7 +149,7 @@ class ChangeType(Matcher):
 class FixStepX(RenameProperty):
     def __init__(self):
         RenameProperty.__init__(self, 'step_x', 'pixel_x')
-        
+
 @MapFix(None)
 class FixStepY(RenameProperty):
     def __init__(self):
@@ -157,13 +159,13 @@ class FixStepY(RenameProperty):
 class RepairDirections(Matcher):
     def __init__(self):
         pass
-    
+
     def Matches(self, atom):
         return 'dir' in atom.properties and 'dir' in atom.mapSpecified and isinstance(atom.properties['dir'], BYONDString)
-    
+
     def Fix(self, atom):
         atom.setProperty('dir', int(atom.getProperty('dir')))
         return atom
-    
+
     def __str__(self):
         return 'Repaired direction type'

@@ -19,8 +19,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 '''
+from __future__ import print_function
 
 import os, logging, sys, traceback, fnmatch
+# Py 2/3 bridge imports
+from builtins import range
 
 from . import DMI
 
@@ -33,23 +36,23 @@ def compare(theirsfile, minefile, parser, reportstream, **kwargs):
     mine = []
     mineDMI = None
     states = []
-    
+
     new2mineFilename = minefile.replace('.dmi', '.new.dmi')
     new2theirsFilename = theirsfile.replace('.dmi', '.new.dmi')
-    
+
     new2mine=None
     if os.path.isfile(new2mineFilename):
         os.remove(new2mineFilename)
     if kwargs.get('newfile_mine',True):
         new2mine = DMI(new2mineFilename)
-    
+
     new2theirs=None
     if os.path.isfile(new2theirsFilename):
         os.remove(new2theirsFilename)
     if kwargs.get('newfile_theirs',False):
         new2theirs = DMI(new2theirsFilename)
-    
-    
+
+
     o = ''
     if(os.path.isfile(theirsfile)):
         try:
@@ -85,7 +88,7 @@ def compare(theirsfile, minefile, parser, reportstream, **kwargs):
                 states.append(stateName)
     for state in sorted(states):
         inTheirs = state in theirs
-        inMine = state in mine 
+        inMine = state in mine
         if inTheirs and not inMine:
             o += '\n + {1}'.format(minefile, state)
             if new2mine is not None:
@@ -100,15 +103,15 @@ def compare(theirsfile, minefile, parser, reportstream, **kwargs):
                 o += '\n + {0}: {1}'.format(theirs[state].displayName(), theirs[state].ToString())
             elif kwargs.get('check_changed',True):
                 diff_count=0
-                for i in xrange(len(theirs[state].icons)):
+                for i in range(len(theirs[state].icons)):
                     theirF = theirs[state].icons[i]
-                    myF = theirs[state].icons[i] 
-                    
+                    myF = theirs[state].icons[i]
+
                     theirData = list(theirF.getdata())
                     myData = list(myF.getdata())
                     #diff = []
-                    
-                    for i in xrange(len(theirData)):
+
+                    for i in range(len(theirData)):
                         dr = theirData[i][0] - myData[i][0]
                         dg = theirData[i][1] - myData[i][1]
                         db = theirData[i][2] - myData[i][2]
@@ -122,11 +125,11 @@ def compare(theirsfile, minefile, parser, reportstream, **kwargs):
                         new2mine.states[state] = theirsDMI.states[state]
                     if new2theirs is not None:
                         new2theirs.states[state] = mineDMI.states[state]
-    if o != '': 
+    if o != '':
         reportstream.write('\n--- {0}'.format(theirsfile))
         reportstream.write('\n+++ {0}'.format(minefile))
         reportstream.write(o)
-        
+
         if new2mine is not None:
             if len(new2mine.states) > 0:
                 new2mine.save(new2mineFilename)
@@ -141,13 +144,13 @@ def compare(theirsfile, minefile, parser, reportstream, **kwargs):
                 if os.path.isfile(new2theirsFilename):
                     os.remove(new2theirsFilename)
                     #print('RM {0}'.format(new2theirsFilename))
-                    
+
 def get_dmi_data(path, dest, parser):
     if(os.path.isfile(path)):
         dmi = DMI(path)
         with open(dest, 'w') as f:
             f.write(dmi.getHeader())
-                
+
 def set_dmi_data(path, headerFile, parser):
     if(os.path.isfile(path)):
         dmi = DMI(path)
@@ -199,7 +202,7 @@ def disassemble(path, to, parser):
         except Exception as e:
             print("Received error, continuing: %s" % traceback.format_exc())
 
-                    
+
 def cleanup(subject):
     print('Cleaning...')
     for root, _, filenames in os.walk(subject):
@@ -220,7 +223,7 @@ def disassemble_all(in_dir, out_dir, parser):
             path = os.path.join(root, filename)
             to = os.path.join(out_dir, path.replace(in_dir, '').replace(os.path.basename(path), ''))
             disassemble(path, to, parser)
-    
+
 
 def compare_all(left_dir, right_dir, report, parser, **kwargs):
     logging.info('Comparing {} vs. {}...'.format(left_dir, right_dir))
@@ -231,8 +234,8 @@ def compare_all(left_dir, right_dir, report, parser, **kwargs):
                 left = os.path.join(root, filename)
                 right = os.path.join(right_dir, left.replace(left_dir, '').replace(os.path.basename(left), ''))
                 right = os.path.join(right, filename)
-                
+
                 left = os.path.abspath(left)
                 right = os.path.abspath(right)
-                
+
                 compare(left, right, parser, report, **kwargs)

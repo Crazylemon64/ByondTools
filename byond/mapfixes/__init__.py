@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import logging, glob, os, sys
 from .base import MapFix, GetDependencies
 
@@ -13,7 +15,7 @@ def Load():
             if not attr.startswith('_'):
                 #print('  {} = {}'.format(attr,getattr(mod, attr)))
                 globals()[attr] = getattr(mod, attr)
-                
+
 def GetFixesForNS(namespaces, load_dependencies=True):
     selected = [None] + namespaces
     depends = GetDependencies()

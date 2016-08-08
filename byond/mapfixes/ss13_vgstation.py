@@ -1,6 +1,7 @@
 '''
 /vg/station-specific fixes.
 '''
+from __future__ import print_function
 
 from .base import Matcher, MapFix, RenameProperty, DeclareDependencies, ChangeType
 from byond.basetypes import BYONDString, BYONDValue, Atom, PropertyFlags

@@ -3,7 +3,7 @@
 Usage:
     $ python calculateMaxTechLevels.py path/to/your.dme .dm
 
-calculateMaxTechLevels.py - Get techlevels of all objects and generate reports. 
+calculateMaxTechLevels.py - Get techlevels of all objects and generate reports.
 
 Copyright 2013 Rob "N3X15" Nelson <nexis@7chan.org>
 
@@ -26,9 +26,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 """
+from __future__ import print_function
+
 import os, sys, re, logging
 from byond.objtree import ObjectTree
 from byond.basetypes import Atom, Proc
+
+from future.utils import viewkeys, viewitems
 
 # Calculated Max Tech Levels.
 CMTLs = {}
@@ -41,7 +45,7 @@ def ProcessTechLevels(atom, path=''):
     if path.endswith(')'):
         # print('ignoring '+path)
         return
-    for key, val in atom.properties.iteritems():
+    for key, val in viewitems(atom.properties):
         # if 'obj' in path: print('{}: {}'.format(path,key))
         if key == 'origin_tech':
             tech_origin = {}
@@ -64,18 +68,18 @@ def ProcessTechLevels(atom, path=''):
                     CMTLs[tech] = level
             AtomTechOrigins[path] = tech_origin
             break
-    for key, child in atom.children.iteritems():
+    for key, child in viewitems(atom.children):
         ProcessTechLevels(child, path + '/' + key)
 
 def prettify(tree, indent=0):
     prefix = ' ' * indent
-    for key in tree.iterkeys():
+    for key in viewkeys(tree):
         atom = tree[key]
         print('{}{}/'.format(prefix, key))
         prettify(atom.children, indent + len(key))
-        for propkey, value in atom.properties.iteritems():
+        for propkey, value in viewitems(atom.properties):
             print('{}var/{} = {}'.format(' ' * (indent + len(key)), propkey, repr(value)))
-        
+
 if os.path.isfile(sys.argv[1]):
     tree = ObjectTree()
     tree.ProcessFilesFromDME(sys.argv[1])

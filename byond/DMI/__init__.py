@@ -1,15 +1,19 @@
-
+from __future__ import print_function
 import sys, os, glob, string, traceback, fnmatch, math, shutil, collections
 
 from PIL import Image, PngImagePlugin
-from .State import State
-from byond.DMIH import *
 import logging
+# Py 2/3 bridge imports
+from builtins import range
+from future.utils import viewitems
+
+from byond.DMIH import *
+from .State import State
 
 class DMILoadFlags:
     NoImages = 1
     NoPostProcessing = 2
-    
+
 
 class DMI:
     MovementTag = '\t'
@@ -25,7 +29,7 @@ class DMI:
         self.max_x = -1
         self.max_y = -1
         self.img = None
-        
+
     def make(self, makefile):
         print('>>> Compiling %s -> %s' % (makefile, self.filename))
         h = DMIH()
@@ -44,7 +48,7 @@ class DMI:
                     dmi.extractTo("_tmp/" + os.path.basename(node.filedef))
                     for name in dmi.states:
                         self.states[name] = dmi.states[name]
-                        
+
     def save(self, to, **kwargs):
         if len(self.states) == 0:
             return  # Nope.
@@ -53,15 +57,15 @@ class DMI:
         manifest += '\nversion = 4.0'
         manifest += '\n\twidth = {0}'.format(self.icon_width)
         manifest += '\n\theight = {0}'.format(self.icon_height)
-        
+
         frames = []
         fdata = []
-        
+
         # Sort by name because I'm autistic like that.
         ordered = self.states
         if kwargs.get('sort', True):
             ordered = sorted(self.states.keys())
-            
+
         for name in ordered:
             if len(self.states[name].icons) > 0:
                 manifest += self.states[name].genManifest()
@@ -77,18 +81,18 @@ class DMI:
             else:
                 logging.warn('State {0} has 0 icons.'.format(name))
         manifest += '\n#END DMI'
-            
+
         # print(manifest)
-        
+
         # Next bit borrowed from DMIDE.
         icons_per_row = math.ceil(math.sqrt(len(frames)))
         rows = icons_per_row
-        
+
         if len(frames) > icons_per_row * rows:
             rows += 1
-            
+
         sheet = Image.new('RGBA', (int((icons_per_row + 1) * self.icon_width), int(rows * self.icon_height)))
-        
+
         x = 0
         y = 0
         # for frame in frames:
@@ -105,7 +109,7 @@ class DMI:
             if x > icons_per_row:
                 y += 1
                 x = 0
-                    
+
         # More borrowed from DMIDE:
         # undocumented class
         meta = PngImagePlugin.PngInfo()
@@ -115,7 +119,7 @@ class DMI:
         for k, v in sheet.info.items():
                 if k in reserved: continue
                 meta.add_text(k, v, 1)
-                
+
         # Only need one - Rob
         meta.add_text(b'Description', manifest.encode('ascii'), 1)
 
@@ -132,16 +136,16 @@ class DMI:
 
         for s in sorted(self.states):
             o += self.states[s].genDMIH()
-        
+
         return o
-        
+
     def genDMIHLine(self, name, value, default):
         if value != default:
             if type(value) is list:
                 value = ','.join(value)
             return '\n{0} = {1}'.format(name, value)
         return ''
-    
+
     def extractTo(self, dest, suppress_post_process=False):
         flags = 0
         if(suppress_post_process):
@@ -150,28 +154,28 @@ class DMI:
         self.loadAll(flags)
         # print('>>> Extracting %s...' % self.filename)
         self.extractAllStates(dest, flags)
-    
+
     def getFrame(self, state, direction, frame, movement=False):
         state = State.MakeKey(state,movement=movement)
         if state not in self.states:
             return None
         return self.states[state].getFrame(direction, frame)
-    
+
     def setFrame(self, state, direction, frame, img, movement=False):
         state = State.MakeKey(state,movement=movement)
         if state not in self.states:
             self.states[state] = State(state)
         return self.states[state].setFrame(direction, frame, img)
-    
+
     def getHeader(self):
         img = Image.open(self.filename)
         if(b'Description' not in img.info):
             raise Exception("DMI Description is not in the information headers!")
         return img.info[b'Description'].decode('ascii')
-    
+
     def setHeader(self, newHeader, dest):
         img = Image.open(self.filename)
-                    
+
         # More borrowed from DMIDE:
         # undocumented class
         meta = PngImagePlugin.PngInfo()
@@ -182,23 +186,23 @@ class DMI:
                 if k in reserved: continue
                 # print(k, v)
                 meta.add_text(k, v, 1)
-                
+
         # Only need one - Rob
         meta.add_text(b'Description', newHeader.encode('ascii'), 1)
 
         # and save
         img.save(dest + '.tmp', 'PNG', pnginfo=meta)
         shutil.move(dest + '.tmp', dest)
-        
+
     def loadMetadata(self, flags=0):
         self.load(flags | DMILoadFlags.NoImages)
-        
+
     def loadAll(self, flags=0):
         self.load(flags)
-    
+
     def load(self, flags):
         self.img = Image.open(self.filename)
-        
+
         # This is a stupid hack to work around BYOND generating indexed PNGs with unspecified transparency.
         # Uncorrected, this will result in PIL(low) trying to read the colors as alpha.
         if self.img.mode == 'P':
@@ -206,19 +210,19 @@ class DMI:
             if 'transparency' not in self.img.info:
                 logging.warn('({0}): Indexed PNG does not specify transparency! Setting black as transparency. self.img.info = {1}'.format(self.filename, repr(self.img.info)))
                 self.img.info['transparency'] = 0
-                
+
             # Always use RGBA, it causes less problems.
             self.img = self.img.convert('RGBA')
-            
+
         self.size = self.img.size
 
         # Sanity
         if(b'Description' not in self.img.info):
             raise Exception("DMI Description is not in the information headers!")
-        
+
         # Load pixels from image
         self.pixels = self.img.load()
-        
+
         # Load DMI header
         desc = self.img.info[b'Description'].decode('ascii')
         """
@@ -307,7 +311,7 @@ state = "void2"
                 else:
                     logging.critical('Unknown key ' + key + ' (value=' + value + ')!')
                     sys.exit()
-        
+
         self.states[state.name] = state
         for _ in range(state.numIcons()):
             self.states[state.name].icons += [self.loadIconAt(x, y)]
@@ -315,14 +319,14 @@ state = "void2"
             if(x >= self.max_x):
                 x = 0
                 y += 1
-            
+
     def extractAllStates(self, dest, flags=0):
-        for _, state in self.states.iteritems():
+        for _, state in viewitems(self.states):
             # state = State()
-            for i in xrange(len(state.positions)):
+            for i in range(len(state.positions)):
                 x, y = state.positions[i]
                 self.extractIconAt(state, dest, x, y, i)
-             
+
                 if (flags & DMILoadFlags.NoPostProcessing) == 0:
                     self.states[state.name].postProcess()
                 if dest is not None:
@@ -333,13 +337,13 @@ state = "void2"
                     nfn = os.path.join(outfolder, nfn)
                     with open(nfn, 'w') as dmih:
                         dmih.write(self.getDMIH())
-        
+
     def loadIconAt(self, sx, sy):
         if(self.icon_width == 0 or self.icon_height == 0):
             raise SystemError('Image is {}x{}, an invalid size.'.format(self.icon_height, self.icon_width))
         # print("  X (%d,%d)"%(sx*self.icon_width,sy*self.icon_height))
         icon = Image.new(self.img.mode, (self.icon_width, self.icon_height))
-        
+
         newpix = icon.load()
         for y in range(self.icon_height):
             for x in range(self.icon_width):
@@ -358,7 +362,7 @@ state = "void2"
                     print(self.statelist)
                     sys.exit(1)
         return icon
-                    
+
     def extractIconAt(self, state, dest, sx, sy, i=0):
         icon = self.loadIconAt(sx, sy)
         outfolder = os.path.join(dest, os.path.basename(self.filename))
