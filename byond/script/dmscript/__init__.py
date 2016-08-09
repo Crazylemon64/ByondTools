@@ -176,8 +176,8 @@ class DreamSyntax(object):
                                 ])
         listContents = pyp.delimitedList(listElement)
         # This *might* be a hack? I'm not sure - the group makes multiple empty top-level dicts
-        dreamList << pyp.Group(listStart + listContents + listEnd)
-        # dreamList << listStart + listContents + listEnd
+        # dreamList << pyp.Group(listStart + listContents + listEnd)
+        dreamList << listStart + listContents + listEnd
         dreamList.setParseAction(self.makeList)
 
         return dreamList
@@ -265,7 +265,9 @@ class DreamSyntax(object):
         print(repr(toks))
         print(type(toks[0]))
         print(repr(toks[0]))
-        if not isinstance(toks[0], list):  # Non-associative(list)
+        # print(type(toks[0][0]))
+        # print(repr(toks[0][0]))
+        if not isinstance(toks[0], pyp.ParseResults):  # Non-associative(list)
             print("Making list")
             l = []
             for tok in toks:
@@ -283,6 +285,7 @@ class DreamSyntax(object):
                     print("ParseResult in dictionary: {} -> {}".format(k,v))
                     continue
                 print("{} = {}".format(k,v))
+                print("{} -> {}".format(type(k),type(v)))
                 d[k] = v
             return d
 

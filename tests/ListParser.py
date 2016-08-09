@@ -14,14 +14,27 @@ class ListParserTests(unittest.TestCase):
         testString = 'list("apple"=1, "b"="c")'
 
         result = self.syntax.ParseString(__file__,testString)
+        # TODO: This doesn't seem very general-purpose - push this into DreamSyntax
+        result = dict(result[0])
 
         self.assertEqual(result['apple'], 1)
         self.assertEqual(result['b'], 'c')
+
+    def test_syntax_nonassociative_commas(self):
+        testString = 'list("I\'m terrible, aren\'t I?", "bagel", 27)'
+
+        result = self.syntax.ParseString(__file__,testString)
+        result = list(result)
+
+        self.assertEqual(result[0], "I'm terrible, aren't I?")
+        self.assertEqual(result[1], "bagel")
+        self.assertEqual(result[2], 27)
 
     def test_syntax_nonassociative_nums(self):
         testString = 'list(2,0,8,3)'
 
         result = self.syntax.ParseString(__file__,testString)
+        result = list(result)
 
         self.assertEqual(result[0], 2)
         self.assertEqual(result[1], 0)
@@ -32,6 +45,7 @@ class ListParserTests(unittest.TestCase):
         testString = 'list("waffle",23,"q",4.5)'
 
         result = self.syntax.ParseString(__file__,testString)
+        result = list(result)
 
         self.assertEqual(result[0], "waffle")
         self.assertEqual(result[1], 23)
