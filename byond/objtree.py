@@ -1,9 +1,12 @@
 '''
 Superficially generate an object/property tree.
 '''
+from __future__ import absolute_import
 import re, logging, os
 import sre_constants
 from byond.script.dmscript import ParseDreamList
+from byond.logging import debug
+
 from future.utils import viewitems
 from builtins import range
 
@@ -20,9 +23,6 @@ REGEX_ATOMDEF = re.compile('^(?P<tabs>\t*)(?P<atom>[a-zA-Z0-9_/]+)\\{?\\s*$')
 REGEX_ABSOLUTE_PROCDEF = re.compile('^(?P<tabs>\t*)(?P<atom>[a-zA-Z0-9_/]+)/(?P<proc>[a-zA-Z0-9_]+)\((?P<args>.*)\)\\{?\s*$')
 REGEX_RELATIVE_PROCDEF = re.compile('^(?P<tabs>\t*)(?P<proc>[a-zA-Z0-9_]+)\((?P<args>.*)\)\\{?\\s*$')
 REGEX_LINE_COMMENT = re.compile('//.*?$')
-
-def debug(filename, line, path, message):
-    print('{0}:{1}: {2} - {3}'.format(filename, line, '/'.join(path), message))
 
 class OTRCache(object):
     #: Only used for obliterating outdated data.
@@ -58,10 +58,12 @@ class OTRCache(object):
         # print('READ FILES')
         # Block 2: Files
         self.files = pickle.load(self.handle)
+        return self.files
 
     def ReadAtoms(self):
         # print('READ ATOMS')
-        return pickle.load(self.handle)
+        self.atoms = pickle.load(self.handle)
+        return self.atoms
 
     def CheckFileHash(self, fn, md5):
         # print('{0}: {1}'.format(fn,md5))

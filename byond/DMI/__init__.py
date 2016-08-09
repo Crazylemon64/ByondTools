@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 import sys, os, glob, string, traceback, fnmatch, math, shutil, collections
 
 from PIL import Image, PngImagePlugin

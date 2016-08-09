@@ -1,4 +1,5 @@
-import hashlib, ast, os, time, sys
+from __future__ import absolute_import
+import hashlib, ast, os, time, sys, logging
 import operator as op
 
 def clock():
@@ -6,7 +7,7 @@ def clock():
         return time.clock()
     else:
         return time.time()
-    
+
 def md5sum(filename):
     with open(filename, mode='rb') as f:
         d = hashlib.md5()
@@ -38,16 +39,16 @@ def getElapsed(start):
 def secondsToStr(t):
     return "%d:%02d:%02d.%03d" % \
         reduce(lambda ll, b : divmod(ll[0], b) + ll[1:], [(t * 1000,), 1000, 60, 60])
-        
+
 class TimeExecution(object):
     def __init__(self, label):
         self.start_time = None
         self.label = label
-    
+
     def __enter__(self):
         self.start_time = clock()
         return self
-    
+
     def __exit__(self, type, value, traceback):
         logging.info('  Completed in {1}s - {0}'.format(self.label, secondsToStr(clock() - self.start_time)))
         return False
@@ -58,22 +59,22 @@ class ProfilingTarget(object):
         self.calls = 0
         self.elapsed = 0
         self.start_time = 0
-        
+
     def start(self):
         start_time = clock()
-        
+
     def end(self):
         el = clock() - self.start_time
         calls += 1
         elapsed += el
         return el
-    
+
     def __str__(self):
         return "{} - C: {}, E: {}, A: {}".format(self.name, self.calls, getElapsed(self.elapsed), getElapsed(self.elapsed / self.calls))
-    
+
     def ToCSV(self):
         return "{},{},{},{}".format(self.name, self.calls, getElapsed(self.elapsed), getElapsed(self.elapsed / self.calls))
-    
+
 class Profiler(object):
     def __init__(self):
         self.targets = {}
@@ -87,7 +88,7 @@ def eval_(node):
         return eval_(node.op)(eval_(node.left), eval_(node.right))
     else:
         raise TypeError(node)
-    
+
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 

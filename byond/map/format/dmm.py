@@ -8,7 +8,7 @@ from future.utils import viewkeys
 from byond.basetypes import *
 from byond.utils import getElapsed, do_profile
 # from byond.map import Tile, MapLayer
-from byond.map.format.base import BaseMapFormat, MapFormat
+from byond.map.format import BaseMapFormat, MapFormat
 
 ID_ENCODING_TABLE = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 IET_SIZE = len(ID_ENCODING_TABLE)

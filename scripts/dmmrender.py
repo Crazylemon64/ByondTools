@@ -30,8 +30,9 @@ THE SOFTWARE.
 import os, argparse, logging
 from byond.objtree import ObjectTree
 from byond.basetypes import Atom
-from byond.map import Map, MapRenderFlags
-                
+from byond.map import Map
+from byond.map_render import MapRenderFlags
+
 def renderMap(args):
     outfile = args.map + '.{z}.png'
     if args.area:

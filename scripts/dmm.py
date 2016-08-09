@@ -29,6 +29,7 @@ import sys, argparse, os, re
 from byond import ObjectTree, Map, MapRenderFlags
 from byond.basetypes import Atom, PropertyFlags
 from byond.map.format.dmm import DMMFormat
+from byond.map_render import RenderToMapTile
 
 from builtins import range
 
@@ -478,9 +479,9 @@ def analyze_dmm(args):
             for atom in tile.SortAtoms():
                 body += '<li><a href="{{ROOT}}/instances/{0}.html">#{0}</a> - {1}</li>'.format(atom.ID, atom.path)
             body += '</ul></td></tr>'
-            img = tile.RenderToMapTile(0, os.path.dirname(sys.argv[1]), MapRenderFlags.RENDER_STARS)
+            img = RenderToMapTile(tile, 0, os.path.dirname(sys.argv[1]), MapRenderFlags.RENDER_STARS)
             if img is None: continue
-            pass_2 = tile.RenderToMapTile(1, os.path.dirname(sys.argv[1]), 0)
+            pass_2 = RenderToMapTile(tile, 1, os.path.dirname(sys.argv[1]), 0)
             if pass_2 is not None:
                 img.paste(pass_2, (0, 0, 96, 96), pass_2)
             img.save(os.path.join(basedir, 'tiles', '{0}.png'.format(tile.ID)), 'PNG')
