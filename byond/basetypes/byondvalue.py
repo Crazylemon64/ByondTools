@@ -1,6 +1,6 @@
 class BYONDValue(object):
     """
-    Handles numbers and unhandled types like lists.
+    The parent type of all BYOND vars
     """
     def __init__(self, string, filename='', line=0, typepath='/', **kwargs):
         # : The actual value.
@@ -29,7 +29,7 @@ class BYONDValue(object):
 
     def copy(self):
         '''Make a clone of this without dangling references.'''
-        return BYONDValue(self.value, self.filename, self.line, self.type, declaration=self.declaration, inherited=self.inherited, special=self.special)
+        return self.__class__(self.value, self.filename, self.line, self.type, declaration=self.declaration, inherited=self.inherited, special=self.special)
 
     def __str__(self):
         if self.value is None:
@@ -37,7 +37,7 @@ class BYONDValue(object):
         return '{0}'.format(self.value)
 
     def __repr__(self):
-        return '<BYONDValue value="{}" filename="{}" line={}>'.format(self.value, self.filename, self.line)
+        return '<{} value="{}" filename="{}" line={}>'.format(self.__class__.__name__, self.value, self.filename, self.line)
 
     def DumpCode(self, name):
         '''

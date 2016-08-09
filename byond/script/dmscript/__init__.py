@@ -21,8 +21,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 :author: Rob "N3X15" Nelson <nexisentertainment@gmail.com>
 '''
 from __future__ import print_function
-from byond.basetypes import BYONDFileRef, BYONDList, BYONDString, BYONDValue
+from byond.basetypes import BYONDFileRef, BYONDList, BYONDString, BYONDNumber
 import pyparsing as pyp
+import logging
 
 class PPStackElement(object):
     def __init__(self, ends=[], toggles=[], blocking=False):
@@ -60,8 +61,9 @@ class DreamSyntax(object):
         self.ifstack = []
 
         self.atomContext = []
+        self.log = logging.getLogger(__name__)
 
-    def ParseString(self, filename):
+    def ParseString(self, filename, string):
         try:
             return self.syntax.parseString(string)
         except pyp.ParseException as err:
@@ -151,6 +153,9 @@ class DreamSyntax(object):
         return dreamScript
 
     def buildListSyntax(self):
+        '''
+        Grammar for list parsing
+        '''
         dreamList = pyp.Forward()
 
         # Literals
@@ -170,7 +175,9 @@ class DreamSyntax(object):
                                 ("=", 2, pyp.opAssoc.LEFT,),
                                 ])
         listContents = pyp.delimitedList(listElement)
+        # This *might* be a hack? I'm not sure - the group makes multiple empty top-level dicts
         dreamList << pyp.Group(listStart + listContents + listEnd)
+        # dreamList << listStart + listContents + listEnd
         dreamList.setParseAction(self.makeList)
 
         return dreamList
@@ -228,9 +235,10 @@ class DreamSyntax(object):
 
     def makeListString(self, s, l, t):
         return self.makeString(s, l, t, True)
+
     def makeString(self, s, l, toks, from_list=False):
         # print('makeString(%r)' % toks[0])
-        if self.simplify_lists:
+        if self.simplify_lists and from_list:
             return [toks[0]]
         return [BYONDString(toks[0])]
 
@@ -238,29 +246,45 @@ class DreamSyntax(object):
         # print('makeFileRef(%r)' % toks[0])
         return [BYONDFileRef(toks[0])]
 
-    def makeListNumber(self, s, l, t):
-        return self.makeString(s, l, t, True)
+    # Not sure why this is a thing...?
+    def makeListNumber(self, s, l, toks):
+        # print('makeListNumber(%r)' % repr(toks))
+        return self.makeNumber(s, l, toks, True)
 
     def makeNumber(self, s, l, toks, from_list=False):
         # print('makeNumber(%r)' % toks[0])
-        return [BYONDValue(float(toks[0]))]
+        if self.simplify_lists and from_list:
+            return [float(toks[0])]
+        return [BYONDNumber(float(toks[0]))]
 
     def makeList(self, toks):
-        # print('makeList')
-        # for i in range(len(toks)):
-        #   print('{} = {}'.format(i,toks[i]))
-        toks = toks[0]
+        # We grab only the first element because the second is an empty dict(?)
+        # print(toks.dump())
         print('makeList(%r)' % toks)
-        if len(toks[0]) == 1:  # Constant, so a non-assoc list.
+        print(type(toks))
+        print(repr(toks))
+        print(type(toks[0]))
+        print(repr(toks[0]))
+        if not isinstance(toks[0], list):  # Non-associative(list)
+            print("Making list")
             l = []
             for tok in toks:
-                l.append(tok[0][1])
+                # print(repr(tok))
+                l.append(tok)
             return l
-        else:  # Associative
-            l = {}
+        else:  # Associative(dictionary)
+            print("Making dict")
+            d = {}
+            # Middle token is "=", so we skip it
+            print("Length of toks: {}".format(len(toks)))
             for k, _, v in toks:
-                l[k] = v
-            return l
+
+                if(isinstance(k, pyp.ParseResults)):
+                    print("ParseResult in dictionary: {} -> {}".format(k,v))
+                    continue
+                print("{} = {}".format(k,v))
+                d[k] = v
+            return d
 
 def ParseDreamList(string):
     return DreamSyntax(list_only=True, simplify_lists=True).ParseString(string)

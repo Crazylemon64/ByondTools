@@ -1,6 +1,7 @@
 import unittest
 
 from Atom import *
+from ListParser import *
 from MapParser import *
 from MapRendering import *
 from ObjectTree import *

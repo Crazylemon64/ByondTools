@@ -28,42 +28,28 @@ class BYONDFileRef(BYONDValue):
     Just to format file references differently.
     """
     def __init__(self, string, filename='', line=0, **kwargs):
-        BYONDValue.__init__(self, string, filename, line, '/icon', **kwargs)
-
-    def copy(self):
-        return BYONDFileRef(self.value, self.filename, self.line, declaration=self.declaration, inherited=self.inherited, special=self.special)
+        super(BYONDFileRef,self).__init__(string, filename, line, '/icon', **kwargs)
 
     def __str__(self):
         return "'{0}'".format(self.value)
-
-    def __repr__(self):
-        return '<BYONDFileRef value="{}" filename="{}" line={}>'.format(self.value, self.filename, self.line)
 
 class BYONDString(BYONDValue):
     """
     Correctly formats strings.
     """
     def __init__(self, string, filename='', line=0, **kwargs):
-        BYONDValue.__init__(self, string, filename, line, '/', **kwargs)
-
-    def copy(self):
-        return BYONDString(self.value, self.filename, self.line, declaration=self.declaration, inherited=self.inherited, special=self.special)
+        super(BYONDString,self).__init__(string, filename, line, '/', **kwargs)
 
     def __str__(self):
         return '"{0}"'.format(self.value)
 
-    def __repr__(self):
-        return '<BYONDString value="{}" filename="{}" line={}>'.format(self.value, self.filename, self.line)
 
 class BYONDList(BYONDValue):
     """
     Correctly formats lists (dict/lists).
     """
     def __init__(self, value, filename='', line=0, **kwargs):
-        BYONDValue.__init__(self, value, filename, line, '/', **kwargs)
-
-    def copy(self):
-        return BYONDString(self.value, self.filename, self.line, declaration=self.declaration, inherited=self.inherited, special=self.special)
+        super(BYONDList, self).__init__(value, filename, line, '/', **kwargs)
 
     def __str__(self):
         vals = []
@@ -76,8 +62,14 @@ class BYONDList(BYONDValue):
             vals = self.value
         return 'list({0})'.format(', '.join(vals))
 
-    def __repr__(self):
-        return '<BYONDList value="{}" filename="{}" line={}>'.format(self.value, self.filename, self.line)
+
+class BYONDNumber(BYONDValue):
+    """
+    Correctly formats numeric values
+    """
+    def __init__(self, value, filename='', line=0, **kwargs):
+        super(BYONDNumber, self).__init__(value, filename, line, '/', **kwargs)
+
 
 class PropertyFlags(object):
     '''Collection of flags that affect :func:`Atom.setProperty` behavior.'''
