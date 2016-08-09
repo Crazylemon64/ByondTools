@@ -12,6 +12,7 @@ from byond.map import Map
 #         self.dmm = Map()
 #
 #     def test_basic_bbox(self):
+#         # Not really any way to know the height until we know how tall our map is
 #         correct_bbox=(
 #             3584,4382,
 #             3616,4414

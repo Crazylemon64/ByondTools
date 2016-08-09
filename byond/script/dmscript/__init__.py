@@ -23,9 +23,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from __future__ import print_function
 from byond.basetypes import BYONDFileRef, BYONDList, BYONDString, BYONDNumber
 import pyparsing as pyp
+from pyparsing import pyparsing_common as pypc
 import logging
 
 class PPStackElement(object):
+    """
+    Not sure what this does.
+    Guesses:
+        PyParsing Stack Element...?
+
+    args:
+        blocking: ???
+        ends: ???
+        toggles: ???
+    """
     def __init__(self, ends=[], toggles=[], blocking=False):
         self.blocking = blocking
         self.ends = ends
@@ -42,10 +53,20 @@ class PPStackElement(object):
         return True  # continue
 
 class IfDefElement(PPStackElement):
+    """
+    Also not sure what this does, either
+    Guesses:
+        Reads #ifdef statements, blocks on else and endif
+    args:
+        state: Something something blocking
+    """
     def __init__(self, state):
-        super(PPStackElement, self).__init__(self, ends=['endif'], toggles=['else'], blocking=state)
+        super(IfDefElement, self).__init__(self, ends=['endif'], toggles=['else'], blocking=state)
 
 class DreamSyntax(object):
+    """
+    Parses DM code
+    """
     def __init__(self, list_only=False, simplify_lists=False):
         if list_only:
             self.syntax = self.buildListSyntax()
@@ -67,13 +88,14 @@ class DreamSyntax(object):
         try:
             return self.syntax.parseString(string)
         except pyp.ParseException as err:
-            print(err.line)
-            print("-"*(err.column - 1) + "^")
-            print(err)
+            self.log.critical(err.line)
+            self.log.critical("-"*(err.column - 1) + "^")
+            self.log.critical(err)
 
     def buildSyntax(self):
         '''WIP'''
         dreamScript = pyp.Forward()
+        dreamList = pyp.Forward()
 
         # Constants
         singlelineString = pyp.QuotedString('"', '\\').setResultsName('string').setParseAction(self.makeString)
@@ -87,9 +109,9 @@ class DreamSyntax(object):
 
         VAR_GLOBAL = pyp.Keyword('global')
         VAR_CONST = pyp.Keyword('const')
+        VAR = pyp.Keyword('var')
         SLASH = pyp.Literal('/')
         EQUAL = pyp.Literal('=')
-        VAR = pyp.Keyword('var')
 
         #############################
         # Grammar
@@ -107,7 +129,9 @@ class DreamSyntax(object):
         dreamList.setParseAction(self.handleList)
 
         #  Paths
-        relpath = pyp.ident | relpath + SLASH + pyp.ident
+        relpath = pyp.Forward()
+        relpath = pypc.identifier | relpath + SLASH + pypc.identifier
+
         abspath = SLASH + relpath
         path = (abspath | relpath).setParseAction(self.handlePath)
         pathslash = path + SLASH
@@ -115,14 +139,14 @@ class DreamSyntax(object):
         #  Preprocessor stuff
         ppStatement = pyp.Forward()
 
-        ppDefine = pyp.Keyword('#define') + pyp.ident.setResultsName('name') + pyp.restOfLine.setResultsName('value')
+        ppDefine = pyp.Keyword('#define') + pypc.identifier.setResultsName('name') + pyp.restOfLine.setResultsName('value')
         ppDefine.setParseAction(self.handlePPDefine)
-        ppUndef = pyp.Keyword('#undef') + pyp.ident.setResultsName('name')
+        ppUndef = pyp.Keyword('#undef') + pypc.identifier.setResultsName('name')
         ppUndef.setParseAction(self.handlePPUndef)
 
-        ppIfdef = (pyp.Keyword('#ifdef') + pyp.ident.setResultsName('name')).setParseAction(self.handlePPIfdef)
-        ppIfndef = (pyp.Keyword('#ifndef') + pyp.ident.setResultsName('name')).setParseAction(self.handlePPIfndef)
-        ppElse = (pyp.Keyword('#else') + pyp.ident.setResultsName('name')).setParseAction(self.handlePPElse)
+        ppIfdef = (pyp.Keyword('#ifdef') + pypc.identifier.setResultsName('name')).setParseAction(self.handlePPIfdef)
+        ppIfndef = (pyp.Keyword('#ifndef') + pypc.identifier.setResultsName('name')).setParseAction(self.handlePPIfndef)
+        ppElse = (pyp.Keyword('#else') + pypc.identifier.setResultsName('name')).setParseAction(self.handlePPElse)
         ppEndif = pyp.Keyword('#endif').setParseAction(self.handlePPElse)
 
         ppStatement = pyp.lineStart + (ppIfdef | ppIfndef | ppElse | ppEndif)
@@ -131,8 +155,8 @@ class DreamSyntax(object):
         ##########################
         var_modifiers = pyp.ZeroOrMore(SLASH + (VAR_GLOBAL | VAR_CONST)).setResultsName('modifiers')
         var_assignment = EQUAL + constant
-        varblock_inner_ref = pyp.ident.setResultsName('name') + pyp.Optional(var_assignment)
-        var_argument = VAR + pyp.Optional(abspath) + SLASH + pyp.ident.setResultsName('name') + pyp.Optional(var_assignment)
+        varblock_inner_ref = pypc.identifier.setResultsName('name') + pyp.Optional(var_assignment)
+        var_argument = VAR + pyp.Optional(abspath) + SLASH + pypc.identifier.setResultsName('name') + pyp.Optional(var_assignment)
         varblock_inner_decl = var_modifiers + pyp.Optional(abspath) + SLASH + varblock_inner_ref
         varblock_element = varblock_inner_decl | varblock_inner_ref
         varblock = VAR + pyp.indentedBlock(var_blockinner_decl)
@@ -141,8 +165,8 @@ class DreamSyntax(object):
 
         # Proc Declarations
         PROC = pyp.Keyword('proc')
-        proc_args = '(' + pyp.delimitedList(var_argument | pyp.ident.setResultsName('name')) + ')'
-        procblock_proc = pyp.ident.setResultsName('name') + proc_args + pyp.indentedBlock(proc_instructions)
+        proc_args = '(' + pyp.delimitedList(var_argument | pypc.identifier.setResultsName('name')) + ')'
+        procblock_proc = pypc.identifier.setResultsName('name') + proc_args + pyp.indentedBlock(proc_instructions)
         procblock = PROC + pyp.indentedBlock(procblock_proc, [1])
 
         # Atom blocks
@@ -196,7 +220,7 @@ class DreamSyntax(object):
         number = pyp.Regex(r'\-?\d+(\.\d*)?([eE]\d+)?').setResultsName('number').setParseAction(self.makeListNumber)
 
         #  Paths
-        relpath = pyp.ident | relpath + SLASH + pyp.ident
+        relpath = pypc.identifier | relpath + SLASH + pypc.identifier
         abspath = SLASH + relpath
         path = (abspath | relpath).setParseAction(self.handlePath)
         pathslash = path + SLASH
@@ -218,7 +242,7 @@ class DreamSyntax(object):
 
 
         # DMM Atom definition
-        atomDefProperty = pyp.ident + "=" + listConstant
+        atomDefProperty = pypc.identifier + "=" + listConstant
         atomDefProperty = pyp.operatorPrecedence(atomDefProperty, [
                                 ("=", 2, pyp.opAssoc.LEFT,),
                                 ])
