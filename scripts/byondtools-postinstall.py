@@ -29,7 +29,8 @@ scripts = [
     'dmmrender',
     'dmmfix',
     'ss13_gettechlevels',
-    
+    'byondanal',
+
     # Our post-install.  Now run on Linux, as well.
     "byondtools-postinstall"
 ]
@@ -49,7 +50,7 @@ for fileName in glob.glob(os.path.join(scriptDir, "*.py")):
     if not lines[0].strip().startswith('#!'):
         print('WARNING: {} does not have a shebang.'.format(name))
         startidx=0
-    
+
     targetFile = strippedName
     if sys.platform == 'win32':
         targetFile = fullName

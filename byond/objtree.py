@@ -6,6 +6,7 @@ import re, logging, os
 import sre_constants
 from byond.script.dmscript import ParseDreamList
 from byond.logging import debug
+from byond.utils import eval_expr
 
 from future.utils import viewitems
 from builtins import range
@@ -26,7 +27,7 @@ REGEX_LINE_COMMENT = re.compile('//.*?$')
 
 class OTRCache(object):
     #: Only used for obliterating outdated data.
-    VERSION = [18, 6, 2014]
+    VERSION = [27, 9, 2015]
 
     def __init__(self, filename):
         self.filename = filename
@@ -100,13 +101,13 @@ class ObjectTree(object):
         'atom_defaults.dm'
     )
     def __init__(self, **options):
-        # : All atoms, in a list.
+        #: All atoms, in a list.
         self.Atoms = {}
 
-        # : All atoms, in a tree-node structure.
+        #: All atoms, in a tree-node structure.
         self.Tree = Atom('')
 
-        # : Skip loading from .OTR?
+        #: Skip loading from .OTR?
         self.skip_otr = False
 
         self.LoadedStdLib = False
@@ -218,7 +219,7 @@ class ObjectTree(object):
                 cache.SetFileMD5(filepath, md5)
         if invalid or self.skip_otr or changed_files > 0:
             if invalid:
-                self.log.info('Rebuilding object tree - Parsing DM files...'.format(changed_files))
+                self.log.info('Rebuilding object tree - Parsing DM files...')
             else:
                 self.log.info('{0} changed files. Parsing DM files...'.format(changed_files))
             for f in ToRead:
@@ -374,6 +375,16 @@ class ObjectTree(object):
         '''SOON'''
         return
 
+    def calculate(self, expr):
+        #print('eval({!r})'.format(expr))
+        o=''
+        try:
+            o=eval_expr(expr)
+        except (TypeError, SyntaxError):
+            o=expr
+        #print(' = {!r}'.format(o))
+        return o
+
     def ProcessFile(self, filename):
         self.cpath = []
         self.popLevels = []
@@ -387,6 +398,7 @@ class ObjectTree(object):
         self.fileLayout = []
         self.lineBeforePreprocessing = ''
         self.current_filename = filename
+        self.ignore_section=False
         with open(filename, 'r') as f:
             ln = 0
             ignoreLevel = []
@@ -481,22 +493,27 @@ class ObjectTree(object):
                         defineChunks = line.split(None, 3)
                         if len(defineChunks) == 2:
                             defineChunks += [1]
-                        elif len(defineChunks) == 3:
-                            defineChunks[2] = self.PreprocessLine(defineChunks[2])
-                        # print(repr(defineChunks))
+                        elif len(defineChunks) >= 3:
+                            if defineChunks[2] == '=':
+                                del defineChunks[2]
+                            defineChunks = defineChunks[0:2]+[' '.join(defineChunks[2:])]
+                            defineChunks[2] = self.PreprocessLine(defineChunks[2], filename)
+                        #print(repr(defineChunks))
 
+                        define_name, define_value = defineChunks[1:]
                         # TODO: We don't know how to handle parameterized macros yet.
-                        if '(' in defineChunks[1]:
+                        if '(' in define_name:
                             continue
-
                         try:
-                            if '.' in defineChunks[2]:
-                                self.defines[defineChunks[1]] = BYONDValue(float(defineChunks[2]), filename, ln)
+                            if '.' in define_value:
+                                self.defines[define_name] = BYONDValue(float(define_value), filename, ln)
+                            elif define_value[0] == '"':
+                                self.defines[define_name] = BYONDString(define_value, filename, ln)
                             else:
-                                self.defines[defineChunks[1]] = BYONDValue(int(defineChunks[2]), filename, ln)
+                                self.defines[define_name] = BYONDValue(int(define_value), filename, ln)
                         except:
-                            self.defines[defineChunks[1]] = BYONDString(defineChunks[2], filename, ln)
-                        self.fileLayout += [('DEFINE', defineChunks[1], defineChunks[2])]
+                            self.defines[define_name] = BYONDString(self.calculate(str(define_value)), filename, ln)
+                        self.fileLayout += [('DEFINE', define_name, define_value)]
                     elif directive == 'undef':
                         undefChunks = line.split(' ', 2)
                         if undefChunks[1] in self.defines:
@@ -522,7 +539,7 @@ class ObjectTree(object):
                     continue
 
                 # Preprocessing
-                line = self.PreprocessLine(line)
+                line = self.PreprocessLine(line, filename)
 
                 m = REGEX_TABS.match(self.lineBeforePreprocessing)
                 if m is not None:
@@ -730,7 +747,7 @@ class ObjectTree(object):
         return cNode
 
 
-    def PreprocessLine(self, line):
+    def PreprocessLine(self, line, filename):
         for key, define in self.defines.items():
             if key in line:
                 if key not in self.defineMatchers:
@@ -741,10 +758,9 @@ class ObjectTree(object):
                         continue
                 newline = self.defineMatchers[key].sub(str(define.value), line)
                 if newline != line:
-                    '''
-                    if filename.endswith('pipes.dm'):
-                        print('OLD: {}'.format(line))
-                        print('PPD: {}'.format(newline))
-                    '''
+
+                    #if filename.endswith('pipes.dm'):
+                    #    print('OLD: {}'.format(line))
+                    #    print('PPD: {}'.format(newline))
                     line = newline
         return line

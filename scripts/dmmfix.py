@@ -42,14 +42,15 @@ logging.basicConfig(
 
 opt = argparse.ArgumentParser()  # version='0.1')
 opt.add_argument('-O', '--output', dest='output', type=str, help='Where to place the patched map. (Default is to overwrite input map)', metavar='butts.dmm', nargs='?')
-opt.add_argument('-n', '--namespace', dest='namespaces', type=str, nargs='*', default=[], help='MapFix namespace to load (ss13, vgstation).')
-opt.add_argument('-N', '--no-deps', dest='no_dependencies', action='store_true', help='Stop loading of namespace dependencies.')
-opt.add_argument('-f', '--fix-script', dest='fixscripts', type=str, nargs='*', default=[], help='A script that specifies property and type replacements.')
+opt.add_argument('-n', '--namespace', dest='namespaces', type=str, nargs='*', help='MapFix namespace to load (ss13, vgstation).', required=False)
+opt.add_argument('-N', '--no-deps', dest='no_dependencies', action='store_true', help='Stop loading of namespace dependencies.', required=False)
+opt.add_argument('-f', '--fix-script', dest='fixscripts', type=str, nargs='*', help='A script that specifies property and type replacements.', required=False)
 
-opt.add_argument('dme', nargs='?', default='baystation12.dme', type=str,help='Project file.', metavar='environment.dme')
+opt.add_argument('dme', type=str,help='Project file.', metavar='environment.dme')
 opt.add_argument('map', type=str,help='Map to fix.', metavar='map.dmm')
 
-opt.set_defaults(no_dependencies=False)
+opt.set_defaults(no_dependencies=False, fixscripts=[], namespaces=[])
+print(sys.argv)
 args = opt.parse_args()
 
 actions = []
@@ -103,25 +104,36 @@ logging.info('Iterating tiles...')
 hashMap={} # hash => null to remove, hash => True to not remove, hash => Tile to replace with this.
 it = dmm.Tiles()
 thousandsActivity=0
-for tile in it:
-    if tile is None: continue
-    for atom in tile.GetAtoms(): 
-        ': :type atom Atom:'
-        changes = []
-        tile.RemoveAtom(atom)
-        hash = atom.GetHash()
-        if hash in hashMap:
-            val = hashMap[hash]
-            if val is None or type(val) is Tile:
-                atom = val
-        else:
-            atomInfo='{0} #{1} (Tile #{2}/{3}):'.format(atom.path, atom.ID, it.pos, it.max)
+#for tile in it:
+#    if tile is None: continue
+#    for atom in tile.GetAtoms(): 
+for atom in list(dmm.Atoms()):    
+    '''
+    :type atom Atom:
+    '''
+    hash = atom.GetHash()
+    if hash in hashMap:
+        val = hashMap[hash]
+        if val is None or type(val) is Tile:
+            atom = val
+    else:
+        #print(atom.ID)
+        iteration=0
+        while True:
+            iteration+=1
+            changes = []
+            #tile.RemoveAtom(atom)
+            atomInfo='{0} #{1}:'.format(atom.path, atom.ID)
             for action in actions:
                 action.SetTree(tree)
                 if action.Matches(atom):
-                    atom = action.Fix(atom)
+                    new_atom = action.Fix(atom)
                     changes += [str(action)]
-                    if atom is None: break
+                    if new_atom is None: 
+                        dmm.RemoveAtom(atom)
+                        atom=new_atom
+                        break
+                    atom=new_atom
             
             '''
             compiled_atom = tree.GetAtom(atom.path)
@@ -135,25 +147,22 @@ for tile in it:
             '''
             if len(changes) > 0:
                 thousandsActivity+=1
-                logging.info(atomInfo if atom is not None else '{} (DELETED)'.format(atomInfo))
+                if iteration==1:
+                    logging.info(atomInfo if atom is not None else '{} (DELETED)'.format(atomInfo))
                 for change in changes:
-                    logging.info(' * ' + change)
-        if atom is not None:
-            tile.AppendAtom(atom)
-        if hash not in hashMap:
-            if len(changes) == 0:
-                hashMap[hash]=True
+                    logging.info(' * %s (%d)', change, iteration)
             else:
-                hashMap[hash]=atom
-    if (it.pos % 1000) == 0:
-        if thousandsActivity == 0:
-            logging.info(it.pos)
-        thousandsActivity=0
+                #logging.info('Finished processing {}'.format(atomInfo[:-1]))
+                break
+    if hash not in hashMap:
+        if len(changes) == 0:
+            hashMap[hash]=True
+        else:
+            hashMap[hash]=atom
 #for atom, _ in atomsToFix.items():
 #    print('Atom {0} needs id_tag.'.format(atom))
 with open(args.map + '.missing', 'w') as f:
     for atom in sorted(dmm.missing_atoms):
         f.write(atom + "\n")
-print('--- Saving...')
-dmm.Save(args.output if args.output else args.map + '.fixed')        
-#dmm.writeMap2(args.map.replace('.dmm', '.dmm2') + '.fixed')
+dmm.Save(args.output if args.output else args.map + '.fixed', clean=True)        
+#dmm.Save(args.map.replace('.dmm', '.dmm2') + '.fixed')

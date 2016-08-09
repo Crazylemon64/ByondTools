@@ -3,28 +3,28 @@ class BYONDValue(object):
     The parent type of all BYOND vars
     """
     def __init__(self, string, filename='', line=0, typepath='/', **kwargs):
-        # : The actual value.
+        #: The actual value.
         self.value = string
 
-        # : Filename this was found in
+        #: Filename this was found in
         self.filename = filename
 
-        # : Line of the originating file.
+        #: Line of the originating file.
         self.line = line
 
-        # : Typepath of the value.
+        #: Typepath of the value.
         self.type = typepath
 
-        # : Has this value been inherited?
+        #: Has this value been inherited?
         self.inherited = kwargs.get('inherited', False)
 
-        # : Is this a declaration? (/var)
+        #: Is this a declaration? (/var)
         self.declaration = kwargs.get('declaration', False)
 
-        # : Anything special? (global, const, etc.)
+        #: Anything special? (global, const, etc.)
         self.special = kwargs.get('special', None)
 
-        # : If a list, what's the size?
+        #: If a list, what's the size?
         self.size = kwargs.get('size', None)
 
     def copy(self):

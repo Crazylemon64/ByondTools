@@ -4,9 +4,8 @@ from .basetypes import PropertyFlags
 
 class Atom(object):
     '''
-    An atom is, in simple terms, what BYOND considers a class.
-        Not quite true - the REAL base of BYOND inheritence is /datum, but
-        I'll need to restructure this
+    An atom is, in simple terms, what BYOND considers a class - or at least,
+    the subset of classes that correspond to physical objects (Turfs, Mobs, Objects, Areas)
 
     :param string path:
         The absolute path of this atom.  ex: */obj/item/weapon/gun*
@@ -16,46 +15,46 @@ class Atom(object):
         The line in the aforementioned file.
     '''
 
-    # : Prints all inherited properties, not just the ones that are mapSpecified.
+    #: Prints all inherited properties, not just the ones that are mapSpecified.
     FLAG_INHERITED_PROPERTIES = 1
 
-    # : writeMap2 prints old_ids instead of the actual IID.
+    #: writeMap2 prints old_ids instead of the actual IID.
     FLAG_USE_OLD_ID = 2
 
     def __init__(self, path, filename='', line=0, **kwargs):
         global TURF_LAYER, AREA_LAYER, OBJ_LAYER, MOB_LAYER
 
-        # : Absolute path of this atom
+        #: Absolute path of this atom
         self.path = path
 
-        # : Vars of this atom, including inherited vars.
+        #: Vars of this atom, including inherited vars.
         self.properties = collections.OrderedDict()
 
-        # : List of var names that were specified by the map, if atom was loaded from a :class:`byond.map.Map`.
+        #: List of var names that were specified by the map, if atom was loaded from a :class:`byond.map.Map`.
         self.mapSpecified = []
 
-        # : Child atoms and procs.
+        #: Child atoms and procs.
         self.children = {}
 
-        # : The parent of this atom.
+        #: The parent of this atom.
         self.parent = None
 
-        # : The file this atom originated from.
+        #: The file this atom originated from.
         self.filename = filename
 
-        # : Line from the originating file.
+        #: Line from the originating file.
         self.line = line
 
-        # : Instance ID (maps only).  Used internally, do NOT change.
+        #: Instance ID (maps only).  Used internally, do NOT change.
         self.ID = None
 
-        # : Instance ID that was read from the map.
+        #: Instance ID that was read from the map.
         self.old_id = None
 
-        # : Used internally.
+        #: Used internally.
         self.ob_inherited = False
 
-        # : Loaded from map, but missing in the code. (Maps only)
+        #: Loaded from map, but missing in the code. (Maps only)
         self.missing = kwargs.get('missing', False)
 
         # if not self.missing and path == '/area/engine/engineering':
@@ -63,10 +62,10 @@ class Atom(object):
 
         self._hash = None
 
-        # : Coords
+        #: Coords
         self.coords = None
 
-        # : Used for masters to track instance locations.
+        #: Used for masters to track instance locations.
         self.locations = []
 
     def rmLocation(self, map, coord, autoclean=True):
@@ -246,9 +245,13 @@ class Atom(object):
         return myLayer < otherLayer
 
     def __str__(self):
+        return self.serialize(self.mapSpecified if len(self.mapSpecified) > 0 else None)
+
+    def serialize(self, propkeys=None):
         atomContents = []
         for key, val in self.properties.items():
-            atomContents += ['{0}={1}'.format(key, val)]
+            if propkeys is None or key in propkeys:
+                atomContents += ['{0}={1}'.format(key, val)]
         return '{}{{{}}}'.format(self.path, ';'.join(atomContents))
 
     def dumpPropInfo(self, name):

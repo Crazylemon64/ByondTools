@@ -34,6 +34,14 @@ def DMMSortAlg(v):
     l.reverse()
     return t + tuple(l)
 
+class MapParsingError(Exception):
+    def __init__(self, filename, line, message):
+        self.filename=filename
+        self.line=line
+        self.message=message
+    def __str__(self):
+        return '({filename}:{line}): {message}'.format(filename=self.filename,line=self.line,message=self.message)
+
 @MapFormat('dmm')
 class DMMFormat(BaseMapFormat):
     def __init__(self, map):
@@ -146,6 +154,8 @@ class DMMFormat(BaseMapFormat):
                 x = 0
                 for chunk in chunker(line.strip(), self.idlen):
                     chunk = ''.join(chunk)
+                    if chunk not in self.oldID2NewID:
+                        raise MapParsingError(self.filename,self.lineNumber,'Could not find tile definition "{}".  The map may be corrupt.'.format(chunk))
                     tid = self.oldID2NewID[chunk]
                     #if tid == 1:
                     #print('[{},{}] Chunk: {}, tid: {}'.format(x,y,chunk,tid))
@@ -180,6 +190,7 @@ class DMMFormat(BaseMapFormat):
                 # if((index % 100) == 0):
                 #   print(index)
             else:
+                self.log.info('TILEDEFS END AT LINE {}'.format(self.lineNumber))
                 self.log.info('{} tiles loaded, {} duplicates discarded'.format(index, self.duplicates))
                 return
 

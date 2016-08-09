@@ -7,6 +7,7 @@ Contents:
    :maxdepth: 2
    
    byond/basetypes
+   byond/DMI
 
 
 Indices and tables

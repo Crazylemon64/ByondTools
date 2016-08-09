@@ -33,7 +33,30 @@ from byond.basetypes import Atom
 from byond.map import Map
 from byond.map_render import MapRenderFlags
 
-def renderMap(args):
+def DoRender(dmm, args):
+    renderflags = 0
+    if args.render_stars:
+        renderflags |= MapRenderFlags.RENDER_STARS
+    if args.render_areas:
+        renderflags |= MapRenderFlags.RENDER_AREAS
+    kwargs = {}
+    if args.areas:
+        with open(args.areas) as f:
+            for line in f:
+                if line.startswith("#"):
+                    continue
+                if '=' not in line:
+                    continue
+                outfile, area = line.split('=')
+                args.area = area.strip().split(',')
+                args.outfile = outfile.strip()
+                renderMap(dmm, args, renderflags)
+    else:
+        renderMap(dmm, args, renderflags)
+
+
+def renderMap(dmm, args, renderflags):
+    kwargs={}
     outfile = args.map + '.{z}.png'
     if args.area:
         kwargs['area'] = args.area
@@ -64,28 +87,27 @@ opt.add_argument('--render-only', dest='render_types', action='append', help="Re
 opt.add_argument('--area', dest='area', type=list, nargs='*', default=None, help="Specify an area to restrict rendering to.")
 opt.add_argument('-O', '--out', dest='outfile', type=str, default=None, help="What to name the file ({z} will be replaced with z-level)")
 opt.add_argument('--area-list', dest='areas', type=str, default=None, help="A file with area_file.png = /area/path on each line")
+opt.add_argument('-S', '--script', dest='script', type=argparse.FileType('r'), default=None, help="A script to run, using these arguments.  Will only load the tree and map once.")
 args = opt.parse_args()
 if os.path.isfile(args.project):
     tree = ObjectTree()
     tree.ProcessFilesFromDME(args.project)
     dmm = Map(tree)
     dmm.Load(args.map)
-    renderflags = 0
-    if args.render_stars:
-        renderflags |= MapRenderFlags.RENDER_STARS
-    if args.render_areas:
-        renderflags |= MapRenderFlags.RENDER_AREAS
-    kwargs = {}
-    if args.areas:
-        with open(args.areas) as f:
-            for line in f:
-                if line.startswith("#"):
-                    continue
-                if '=' not in line:
-                    continue
-                outfile, area = line.split('=')
-                args.area = area.strip().split(',')
-                args.outfile = outfile.strip()
-                renderMap(args)
+    if args.script is None:
+        DoRender(dmm, args)
     else:
-        renderMap(args)
+        ln=0
+        for line in args.script:
+            ln+=1
+            line=line.strip()
+            if line=='' or line.startswith('#'):
+                continue
+
+            #opt.set_defaults(project=args.project,map=args.map)
+            logging.info('Executing script: '+line)
+            line_args=opt.parse_args([args.project,args.map]+line.split())
+            if line_args.areas is not None and not os.path.isfile(line_args.areas):
+                logging.warn('Skipping line: {} not found.'.format(line_args.areas))
+                continue
+            DoRender(dmm, line_args)

@@ -74,16 +74,16 @@ class BYONDNumber(BYONDValue):
 class PropertyFlags(object):
     '''Collection of flags that affect :func:`Atom.setProperty` behavior.'''
 
-    # : Property being set should be saved to the map
+    #: Property being set should be saved to the map
     MAP_SPECIFIED = 1
 
-    # : Property being set should be handled as a string
+    #: Property being set should be handled as a string
     STRING = 2
 
-    # : Property being set should be handled as a file reference
+    #: Property being set should be handled as a file reference
     FILEREF = 4
 
-    # : Property being set should be handled as a value
+    #: Property being set should be handled as a value
     VALUE = 8
 
 def byond_wrap(value):
