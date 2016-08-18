@@ -25,7 +25,7 @@ THE SOFTWARE.
 """
 from __future__ import print_function
 
-import sys, argparse, os, re
+import sys, argparse, os, re, logging
 from byond import ObjectTree, Map, MapRenderFlags
 from byond.basetypes import Atom, PropertyFlags
 from byond.map.format.dmm import DMMFormat
@@ -34,6 +34,7 @@ from byond.map_render import RenderToMapTile
 from builtins import range
 
 def main():
+    logging.basicConfig(level = logging.DEBUG)
     dmmt = DMMFormat(None)
     opt = argparse.ArgumentParser()  # version='0.1')
     opt.add_argument('--project', default='baystation12.dme', type=str, help='Project file.', metavar='environment.dme')

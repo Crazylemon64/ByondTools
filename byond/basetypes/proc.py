@@ -1,12 +1,15 @@
-from . import Atom
+# from .atom import Atom
+import re
 
-class Proc(Atom):
+REGEX_TABS = re.compile('^(?P<tabs>\t*)')
+
+class Proc(object):
     """
     No clue why this is a subtype of Atom
     """
     def __init__(self, path, arguments, filename='', line=0):
         # NOTE: Fix when obsoleting Py27
-        super(Proc, self).__init__(self, path, filename, line)
+        super(Proc, self).__init__(path, filename, line)
         self.name = self.figureOutName(self.path)
         self.arguments = arguments
         self.code = []  # (indent, line)

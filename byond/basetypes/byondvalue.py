@@ -1,10 +1,11 @@
 class BYONDValue(object):
     """
-    The parent type of all BYOND vars
+    The parent type of all BYOND vars.
     """
-    def __init__(self, string, filename='', line=0, typepath='/', **kwargs):
+
+    def __init__(self, nvalue, filename='', line=0, typepath='/', **kwargs):
         #: The actual value.
-        self.value = string
+        self.value = nvalue
 
         #: Filename this was found in
         self.filename = filename
@@ -37,7 +38,7 @@ class BYONDValue(object):
         return '{0}'.format(self.value)
 
     def __repr__(self):
-        return '<{} value="{}" filename="{}" line={}>'.format(self.__class__.__name__, self.value, self.filename, self.line)
+        return '{}(nvalue={}, filename="{}", line={})'.format(self.__class__.__name__, repr(self.value), self.filename, self.line)
 
     def DumpCode(self, name):
         '''

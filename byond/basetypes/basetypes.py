@@ -5,14 +5,13 @@ Created on Nov 6, 2013
 '''
 from __future__ import print_function, absolute_import
 
-import re, hashlib, collections
+import re
 
-from byond.color import COLORS, BYOND2RGBA
-from byond.utils import eval_expr
+from builtins import bytes, str
 
 from .byondvalue import BYONDValue
 
-from future.utils import viewkeys
+from future.utils import viewitems
 
 # import logging
 AREA_LAYER = 1
@@ -27,8 +26,8 @@ class BYONDFileRef(BYONDValue):
     """
     Just to format file references differently.
     """
-    def __init__(self, string, filename='', line=0, **kwargs):
-        super(BYONDFileRef,self).__init__(string, filename, line, '/icon', **kwargs)
+    def __init__(self, nvalue, filename='', line=0, **kwargs):
+        super(BYONDFileRef, self).__init__(nvalue, filename, line, '/icon', **kwargs)
 
     def __str__(self):
         return "'{0}'".format(self.value)
@@ -38,7 +37,7 @@ class BYONDString(BYONDValue):
     Correctly formats strings.
     """
     def __init__(self, string, filename='', line=0, **kwargs):
-        super(BYONDString,self).__init__(string, filename, line, '/', **kwargs)
+        super(BYONDString, self).__init__(string, filename, line, '/', **kwargs)
 
     def __str__(self):
         return '"{0}"'.format(self.value)
@@ -54,9 +53,9 @@ class BYONDList(BYONDValue):
     def __str__(self):
         vals = []
         if type(self.value) is dict:
-            for k,v in self.value.items():
-                wk=byond_wrap(k)
-                wv=byond_wrap(v)
+            for k,v in viewitems(self.value):
+                # wk=byond_wrap(k)
+                # wv=byond_wrap(v)
                 vals.append('{} = {}'.format(k,v))
         else:
             vals = self.value
@@ -92,7 +91,8 @@ def byond_wrap(value):
     T = type(value)
     if T is BYONDValue:
         return value
-    if T is str or T is unicode:
+    # NOTE: 2.7/3.5 compatability gymnastics here
+    if isinstance(T, (bytes, str)):
         return BYONDString(value)
     elif T is list or T is dict:
         return BYONDList(value)

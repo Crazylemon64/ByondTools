@@ -31,6 +31,9 @@ from byond.DMI import DMI
 from byond.directions import SOUTH, IMAGE_INDICES
 from byond.basetypes import Atom, BYONDString, BYONDValue, BYONDFileRef
 from byond.color import BYOND2RGBA
+
+from .atom_instances import AtomMapInstance
+
 # from byond.objtree import ObjectTree
 
 from builtins import range

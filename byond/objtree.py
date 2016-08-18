@@ -265,6 +265,19 @@ class ObjectTree(object):
 
 
     def ProcessAtom(self, filename, ln, line, atom, atom_path, numtabs, procArgs=None):
+        """
+        Appears to be called to organize blocks of code.
+        Such as: if, while, procs/verbs
+        Doesn't appear to process actual atoms
+        args:
+            filename: Name of the file this is found in
+            ln:
+            line: A line of code to feed to the processor
+            atom: The line of code that begins the atom's block
+            atom_path: A list of strings that make up the object's path
+            numtabs: Number of indents on the (line? Atom code block?)
+            procArgs:
+        """
         # Reserved words that show up on their own
         if atom in ObjectTree.reserved_words:
             return
@@ -277,7 +290,8 @@ class ObjectTree(object):
         if numtabs > 0 and atom.strip().startswith('/'):
             return
 
-        if self.debugOn: self.log.debug('{} > {}'.format(numtabs, line.rstrip()))
+        self.log.debug('{} > {}'.format(numtabs, line.rstrip()))
+        self.log.debug('Atom: {}\tPath: {}\tCPath: {}'.format(atom, atom_path, self.cpath))
 
         if numtabs == 0:
             self.cpath = atom_path
@@ -286,24 +300,24 @@ class ObjectTree(object):
             elif self.cpath[0] != '':
                 self.cpath.insert(0, '')
             self.popLevels = [len(self.cpath)]
-            if self.debugOn: debug(filename, ln, self.cpath, '0 - ' + repr(atom_path))
+            debug(filename, ln, self.cpath, '0 - ' + repr(atom_path))
 
         elif numtabs > self.pindent:
             self.cpath += atom_path
             self.popLevels += [len(atom_path)]
-            if self.debugOn: debug(filename, ln, self.cpath, '>')
+            debug(filename, ln, self.cpath, '>')
 
         elif numtabs < self.pindent:
-            if self.debugOn: self.log.debug('({} - {})={}: {}'.format(self.pindent, numtabs, self.pindent - numtabs, repr(self.cpath)))
+            self.log.debug('({} - {})={}: {}'.format(self.pindent, numtabs, self.pindent - numtabs, repr(self.cpath)))
             for _ in range(self.pindent - numtabs + 1):
                 popsToDo = self.popLevels.pop()
-                if self.debugOn: self.log.debug(' pop {} {}'.format(popsToDo, self.popLevels))
+                self.log.debug(' pop {} {}'.format(popsToDo, self.popLevels))
                 for i in range(popsToDo):
                     self.cpath.pop()
-                    if self.debugOn: self.log.debug('  pop {}/{}: {}'.format(i + 1, popsToDo, repr(self.cpath)))
+                    self.log.debug('  pop {}/{}: {}'.format(i + 1, popsToDo, repr(self.cpath)))
             self.cpath += atom_path
             self.popLevels += [len(atom_path)]
-            if self.debugOn: debug(filename, ln, self.cpath, '<')
+            debug(filename, ln, self.cpath, '<')
 
         elif numtabs == self.pindent:
             levelsToPop = self.popLevels.pop()
@@ -311,8 +325,9 @@ class ObjectTree(object):
                 self.cpath.pop()
             self.cpath += atom_path
             self.popLevels += [len(atom_path)]
-            if self.debugOn: self.log.debug('popLevels: ' + repr(self.popLevels))
-            if self.debugOn: debug(filename, ln, self.cpath, '==')
+            self.log.debug('popLevels: ' + repr(self.popLevels))
+            debug(filename, ln, self.cpath, '==')
+
 
         origpath = '/'.join(self.cpath)
         # print(npath)
@@ -341,11 +356,12 @@ class ObjectTree(object):
                 self.Atoms[npath] = proc
             else:
                 self.Atoms[npath] = Atom(npath, filename, ln)
-            # if self.debugOn: print('Added ' + npath)
+            # print('Added ' + npath)
         self.pindent = numtabs
         return self.Atoms[npath]
 
     def AddCodeToProc(self, startIndent, code):
+        self.log.debug('Active Proc: {}'.format(self.loadingProc))
         if '\n' in code:
             for line in code.split('\n'):
                 self.AddCodeToProc(startIndent, line)
@@ -386,9 +402,13 @@ class ObjectTree(object):
         return o
 
     def ProcessFile(self, filename):
+        """
+        Reads Atom data from a file
+        """
         self.cpath = []
         self.popLevels = []
-        self.pindent = 0  # Previous Indent
+        # Previous Indent
+        self.pindent = 0
         self.ignoreLevel = []
         self.debugOn = False
         self.ignoreDebugOn = False
@@ -399,216 +419,268 @@ class ObjectTree(object):
         self.lineBeforePreprocessing = ''
         self.current_filename = filename
         self.ignore_section=False
+        # TODO: At some point, when the dmscript module is advanced enough,
+        # this should integrate that
         with open(filename, 'r') as f:
             ln = 0
             ignoreLevel = []
 
-            for line in f:
-                ln += 1
+            try:
+                for line in f:
+                    ln += 1
 
-                skipNextChar = False
-                nl = ''
+                    skipNextChar = False
+                    nl = ''
 
-                line = line.rstrip()
-                self.lineBeforePreprocessing = line
-                line_len = len(line)
-                for i in range(line_len):
-                    c = line[i]
-                    nc = ''
-                    if line_len > i + 1:
-                        nc = line[i + 1]
-                    tok = c + nc
-                    # print(tok)
-                    if skipNextChar:
-                        if self.ignoreDebugOn: self.log.debug('Skipping {}.'.format(repr(tok)))
-                        skipNextChar = False
-                        # self.comment += c
-                        if self.ignoreDebugOn: self.log.debug('self.comment = {}.'.format(repr(self.comment)))
-                        continue
-                    if tok == '//':
-                        # if self.ignoreDebugOn: debug(filename,ln,self.cpath,'{} ({})'.format(tok,len(ignoreLevel)))
+                    line = line.rstrip()
+                    self.lineBeforePreprocessing = line
+                    line_len = len(line)
+                    # Oh man, evaluating comments by character
+                    for i in range(line_len):
+                        c = line[i]
+                        nc = ''
+                        if line_len > i + 1:
+                            nc = line[i + 1]
+                        tok = c + nc
+                        # print(tok)
+                        if skipNextChar:
+                            self.log.debug('Skipping {}.'.format(repr(c)))
+                            skipNextChar = False
+                            # self.comment += c
+                            self.log.debug('self.comment = {}.'.format(repr(self.comment)))
+                            continue
+                        if tok == '//':
+                            # if self.ignoreDebugOn: debug(filename,ln,self.cpath,'{} ({})'.format(tok,len(ignoreLevel)))
+                            if len(ignoreLevel) == 0:
+                                self.comment = line[i:]
+                                # if self.ignoreDebugOn: print('self.comment = {}.'.format(repr(self.comment)))
+                                # print('Found '+self.comment)
+                                self.finishComment('243', cleaned_line=nl)
+                                break
+                        if tok in self.ignoreTokens:
+                            pc = ''
+                            if i > 0:
+                                pc = line[i - 1]
+                            if tok == '{"' and pc == '"':
+                                # This does not look efficient
+                                self.comment += c
+                                continue
+                            # if self.ignoreDebugOn: print(repr(self.ignoreTokens[tok]))
+                            stop = self.ignoreTokens[tok]
+                            if stop == None:  # End comment
+                                if len(ignoreLevel) > 0:
+                                    if ignoreLevel[-1] == tok:
+                                        skipNextChar = True
+                                        self.comment += tok
+                                        ignoreLevel.pop()
+                                        if len(ignoreLevel) == 0:
+                                            self.finishComment('261')
+                                        continue
+                                    else:
+                                        self.comment += c
+                                        continue
+                            else:  # Start comment
+                                skipNextChar = True
+                                ignoreLevel += [stop]
+                                self.comment = tok
+                                continue
+                            if self.ignoreDebugOn: debug(filename, ln, self.cpath, '{} ({})'.format(tok, len(ignoreLevel)))
                         if len(ignoreLevel) == 0:
-                            self.comment = line[i:]
-                            # if self.ignoreDebugOn: print('self.comment = {}.'.format(repr(self.comment)))
-                            # print('Found '+self.comment)
-                            self.finishComment('243', cleaned_line=nl)
-                            break
-                    if tok in self.ignoreTokens:
-                        pc = ''
-                        if i > 0:
-                            pc = line[i - 1]
-                        if tok == '{"' and pc == '"':
+                            nl += c
+                        else:
                             self.comment += c
-                            continue
-                        # if self.ignoreDebugOn: print(repr(self.ignoreTokens[tok]))
-                        stop = self.ignoreTokens[tok]
-                        if stop == None:  # End comment
-                            if len(ignoreLevel) > 0:
-                                if ignoreLevel[-1] == tok:
-                                    skipNextChar = True
-                                    self.comment += tok
-                                    ignoreLevel.pop()
-                                    if len(ignoreLevel) == 0:
-                                        self.finishComment('261')
-                                    continue
-                                else:
-                                    self.comment += c
-                                    continue
-                        else:  # Start comment
-                            skipNextChar = True
-                            ignoreLevel += [stop]
-                            self.comment = tok
-                            continue
-                        if self.ignoreDebugOn: debug(filename, ln, self.cpath, '{} ({})'.format(tok, len(ignoreLevel)))
-                    if len(ignoreLevel) == 0:
-                        nl += c
-                    else:
-                        self.comment += c
 
-                if line != nl:
-                    if self.ignoreDebugOn: self.log.debug('IN : ' + line)
-                    line = nl
-                    if self.ignoreDebugOn: self.log.debug('OUT: ' + line)
-                    if self.ignoreDebugOn: self.log.debug('self.comment = {}.'.format(repr(self.comment)))
+                    if line != nl:
+                        # self.log.debug('IN : ' + line)
+                        line = nl
+                        # self.log.debug('OUT: ' + line)
+                        # self.log.debug('self.comment = {}.'.format(repr(self.comment)))
 
-                if len(ignoreLevel) > 0:
-                    self.comment += "\n"
-                    continue
-
-                line = REGEX_LINE_COMMENT.sub('', line)
-
-                if line.strip() == '':
-                    if self.loadingProc is not None:
-                        self.loadingProc.AddBlankLine()
-                    continue
-
-                # Preprocessing defines.
-                if line.strip().startswith("#"):
-                    if line.endswith('\\'): continue
-                    tokenChunks = line.split('#')
-                    tokenChunks = tokenChunks[1].split()
-                    directive = tokenChunks[0]
-                    if directive == 'define':
-                        # #define SOMETHING Value
-                        defineChunks = line.split(None, 3)
-                        if len(defineChunks) == 2:
-                            defineChunks += [1]
-                        elif len(defineChunks) >= 3:
-                            if defineChunks[2] == '=':
-                                del defineChunks[2]
-                            defineChunks = defineChunks[0:2]+[' '.join(defineChunks[2:])]
-                            defineChunks[2] = self.PreprocessLine(defineChunks[2], filename)
-                        #print(repr(defineChunks))
-
-                        define_name, define_value = defineChunks[1:]
-                        # TODO: We don't know how to handle parameterized macros yet.
-                        if '(' in define_name:
-                            continue
-                        try:
-                            if '.' in define_value:
-                                self.defines[define_name] = BYONDValue(float(define_value), filename, ln)
-                            elif define_value[0] == '"':
-                                self.defines[define_name] = BYONDString(define_value, filename, ln)
-                            else:
-                                self.defines[define_name] = BYONDValue(int(define_value), filename, ln)
-                        except:
-                            self.defines[define_name] = BYONDString(self.calculate(str(define_value)), filename, ln)
-                        self.fileLayout += [('DEFINE', define_name, define_value)]
-                    elif directive == 'undef':
-                        undefChunks = line.split(' ', 2)
-                        if undefChunks[1] in self.defines:
-                            del self.defines[undefChunks[1]]
-                        self.fileLayout += [('UNDEF', undefChunks[1])]
-
-                    # OpenBYOND tokens.
-                    elif directive.startswith('__OB_'):
-                        numtabs = 0
-                        m = REGEX_TABS.match(line)
-                        if m is not None:
-                            numtabs = len(m.group('tabs'))
-                        atom = self.DetermineContext(filename, ln, line, numtabs)
-                        # if atom is None: continue
-                        # print('OBTOK {0}'.format(repr(tokenChunks)))
-                        self.handleOBToken(tokenChunks[0].replace('__OB_', ''), atom, tokenChunks[1:])
-                        # self.fileLayout += [('OBTOK', atom.path)]
+                    if len(ignoreLevel) > 0:
+                        self.comment += "\n"
                         continue
-                    else:
-                        chunks = line.split(' ')
-                        self.fileLayout += [('PP_TOKEN', line)]
-                        self.log.warn('BUG: Unhandled preprocessor directive #{} in {}:{}'.format(directive, filename, ln))
-                    continue
 
-                # Preprocessing
-                line = self.PreprocessLine(line, filename)
+                    line = REGEX_LINE_COMMENT.sub('', line)
 
-                m = REGEX_TABS.match(self.lineBeforePreprocessing)
-                if m is not None:
-                    numtabs = len(m.group('tabs'))
-                    if self.ignoreStartIndent > -1 and self.ignoreStartIndent < numtabs:
+                    if line.strip() == '':
                         if self.loadingProc is not None:
-                            # self.loadingProc.AddCode(numtabs - self.ignoreStartIndent, self.lineBeforePreprocessing.strip())
-                            self.AddCodeToProc(self.ignoreStartIndent, self.lineBeforePreprocessing)
-                        if self.debugOn: self.log.debug('TABS: {} ? {} - {}: {}'.format(numtabs, self.ignoreStartIndent, self.loadingProc, line))
+                            self.loadingProc.AddBlankLine()
                         continue
+
+                    # Preprocessing defines.
+                    if line.strip().startswith("#"):
+                        if line.endswith('\\'): continue
+                        tokenChunks = line.split('#')
+                        tokenChunks = tokenChunks[1].split()
+                        directive = tokenChunks[0]
+                        if directive == 'define':
+                            # #define SOMETHING Value
+                            defineChunks = line.split(None, 3)
+                            if len(defineChunks) == 2:
+                                defineChunks += [1]
+                            elif len(defineChunks) >= 3:
+                                if defineChunks[2] == '=':
+                                    del defineChunks[2]
+                                defineChunks = defineChunks[0:2]+[' '.join(defineChunks[2:])]
+                                defineChunks[2] = self.PreprocessLine(defineChunks[2], filename)
+                            #print(repr(defineChunks))
+
+                            define_name, define_value = defineChunks[1:]
+                            # TODO: We don't know how to handle parameterized macros yet.
+                            if '(' in define_name:
+                                continue
+                            try:
+                                if '.' in define_value:
+                                    self.defines[define_name] = BYONDValue(float(define_value), filename, ln)
+                                elif define_value[0] == '"':
+                                    self.defines[define_name] = BYONDString(define_value, filename, ln)
+                                else:
+                                    self.defines[define_name] = BYONDValue(int(define_value), filename, ln)
+                            except:
+                                self.defines[define_name] = BYONDString(self.calculate(str(define_value)), filename, ln)
+                            self.fileLayout += [('DEFINE', define_name, define_value)]
+                        elif directive == 'undef':
+                            undefChunks = line.split(' ', 2)
+                            if undefChunks[1] in self.defines:
+                                del self.defines[undefChunks[1]]
+                            self.fileLayout += [('UNDEF', undefChunks[1])]
+
+                        # TODO: Not yet implemented
+                        elif directive == 'if':
+                            # #IF value
+                            ifChunks = line.split(None, 2)
+                            conditional = ifChunks[1]
+                            self.log.info("#IF {}".format(conditional))
+                            self.fileLayout += [('IF', conditional)]
+                        # TODO: Not yet implemented
+                        elif directive == 'elif':
+                            # #ELIF value
+                            elifChunks = line.split(None, 2)
+                            conditional = elifChunks[1]
+                            self.log.info("#ELIF {}".format(ifChunks[1]))
+                            self.fileLayout += [('ELIF', conditional, line)]
+                        # TODO: Not yet implemented
+                        elif directive == 'else':
+                            # #ELSE
+                            self.fileLayout += [('ELSE', line)]
+                        # TODO: Not yet implemented
+                        elif directive == 'endif':
+                            # #ENDIF
+                            self.fileLayout += [('ENDIF', line)]
+                        # TODO: Not yet implemented
+                        elif directive == 'include':
+                            # #INCLUDE file
+                            includeChunks = line.split(None, 2)
+                            codeFile = includeChunks[1]
+                            self.log.info('#INCLUDE {}'.format(codeFile))
+                            self.fileLayout += [('INCLUDE', line)]
+                        # TODO: Not yet implemented
+                        elif directive == 'warn':
+                            self.log.warn('BUG: Unhandled preprocessor directive #{} in {}:{}'.format(directive, filename, ln))
+                            self.fileLayout += [('WARN', line)]
+                        elif directive == 'ifdef':
+                            # #IFDEF token
+                            ifdefChunks = line.split(None, 2)
+                            defineName = ifdefChunks[1]
+                            self.log.info("#IFDEF {}".format(defineName))
+                            self.fileLayout += [('IFDEF', defineName)]
+
+                        # OpenBYOND tokens.
+                        elif directive.startswith('__OB_'):
+                            numtabs = 0
+                            m = REGEX_TABS.match(line)
+                            if m is not None:
+                                numtabs = len(m.group('tabs'))
+                            atom = self.DetermineContext(filename, ln, line, numtabs)
+                            # if atom is None: continue
+                            # print('OBTOK {0}'.format(repr(tokenChunks)))
+                            self.handleOBToken(tokenChunks[0].replace('__OB_', ''), atom, tokenChunks[1:])
+                            # self.fileLayout += [('OBTOK', atom.path)]
+                            continue
+                        else:
+                            chunks = line.split(' ')
+                            self.fileLayout += [('PP_TOKEN', line)]
+                            self.log.warn('BUG: Unhandled preprocessor directive #{} in {}:{}'.format(directive, filename, ln))
+                        continue
+
+                    # Preprocessing
+                    line = self.PreprocessLine(line, filename)
+
+                    m = REGEX_TABS.match(self.lineBeforePreprocessing)
+                    if m is not None:
+                        numtabs = len(m.group('tabs'))
+                        if self.ignoreStartIndent > -1 and self.ignoreStartIndent < numtabs:
+                            if self.loadingProc is not None:
+                                # self.loadingProc.AddCode(numtabs - self.ignoreStartIndent, self.lineBeforePreprocessing.strip())
+                                self.AddCodeToProc(self.ignoreStartIndent, self.lineBeforePreprocessing)
+                            self.log.debug('TABS: {} ? {} - {}: {}'.format(numtabs, self.ignoreStartIndent, self.loadingProc, line))
+                            continue
+                        else:
+                            if self.ignoreStartIndent > -1: self.log.debug('BREAK ({} -> {}): {}'.format(self.ignoreStartIndent, numtabs, line))
+                            self.ignoreStartIndent = -1
+                            self.loadingProc = None
                     else:
-                        if self.debugOn and self.ignoreStartIndent > -1: self.log.debug('BREAK ({} -> {}): {}'.format(self.ignoreStartIndent, numtabs, line))
+                        if self.ignoreStartIndent > -1: self.log.debug('BREAK ' + line)
                         self.ignoreStartIndent = -1
                         self.loadingProc = None
-                else:
-                    if self.debugOn and self.ignoreStartIndent > -1: self.log.debug('BREAK ' + line)
-                    self.ignoreStartIndent = -1
-                    self.loadingProc = None
 
-                if not line.strip().startswith('var/'):
-                    m = REGEX_ATOMDEF.match(line)
-                    if m is not None:
-                        numtabs = len(m.group('tabs'))
-                        atom = m.group('atom')
-                        atom_path = self.SplitPath(atom)
-                        atom = self.ProcessAtom(filename, ln, line, atom, atom_path, numtabs)
-                        if atom is None: continue
-                        self.fileLayout += [('ATOMDEF', atom.path)]
-                        continue
+                    if not line.strip().startswith('var/'):
+                        m = REGEX_ATOMDEF.match(line)
+                        if m is not None:
+                            numtabs = len(m.group('tabs'))
+                            atom = m.group('atom')
+                            atom_path = self.SplitPath(atom)
+                            atom = self.ProcessAtom(filename, ln, line, atom, atom_path, numtabs)
+                            if atom is None: continue
+                            self.fileLayout += [('ATOMDEF', atom.path)]
+                            continue
 
-                    m = REGEX_ABSOLUTE_PROCDEF.match(line)
-                    if m is not None:
-                        numtabs = len(m.group('tabs'))
-                        atom = '{0}/{1}({2})'.format(m.group('atom'), m.group("proc"), m.group('args'))
-                        atom_path = self.SplitPath(atom)
-                        # print('PROCESSING ABS PROC AT INDENT > ' + str(numtabs) + " " + atom+" -> "+repr(atom_path))
-                        proc = self.ProcessAtom(filename, ln, line, atom, atom_path, numtabs, m.group('args').split(','))
-                        if proc is None: continue
-                        self.ignoreStartIndent = numtabs
-                        self.loadingProc = proc
-                        self.loadingProc.ClearCode()
-                        self.fileLayout += [('PROCDEF', proc.path)]
-                        continue
+                        m = REGEX_ABSOLUTE_PROCDEF.match(line)
+                        if m is not None:
+                            numtabs = len(m.group('tabs'))
+                            atom = '{0}/{1}({2})'.format(m.group('atom'), m.group("proc"), m.group('args'))
+                            atom_path = self.SplitPath(atom)
+                            # print('PROCESSING ABS PROC AT INDENT > ' + str(numtabs) + " " + atom+" -> "+repr(atom_path))
+                            proc = self.ProcessAtom(filename, ln, line, atom, atom_path, numtabs, m.group('args').split(','))
+                            if proc is None: continue
+                            self.ignoreStartIndent = numtabs
+                            self.loadingProc = proc
+                            self.loadingProc.ClearCode()
+                            self.fileLayout += [('PROCDEF', proc.path)]
+                            continue
 
-                    m = REGEX_RELATIVE_PROCDEF.match(line)
-                    if m is not None:
-                        numtabs = len(m.group('tabs'))
-                        atom = '{}({})'.format(m.group("proc"), m.group('args'))
-                        atom_path = self.SplitPath(atom)
-                        # print('IGNORING RELATIVE PROC AT INDENT > ' + str(numtabs) + " " + line)
-                        proc = self.ProcessAtom(filename, ln, line, atom, atom_path, numtabs, m.group('args').split(','))
-                        if proc is None: continue
-                        self.ignoreStartIndent = numtabs
-                        self.loadingProc = proc
-                        self.loadingProc.ClearCode()
-                        self.fileLayout += [('PROCDEF', proc.path)]
-                        continue
+                        # This also matches stuff like:
+                        # if, while, for
+                        # It'll get thrown for a loop by do/while
+                        m = REGEX_RELATIVE_PROCDEF.match(line)
+                        if m is not None:
+                            conditional_list = ['if', 'while', 'for',]
+                            numtabs = len(m.group('tabs'))
+                            atom = '{}({})'.format(m.group("proc"), m.group('args'))
+                            atom_path = self.SplitPath(atom)
+                            # print('IGNORING RELATIVE PROC AT INDENT > ' + str(numtabs) + " " + line)
+                            proc = self.ProcessAtom(filename, ln, line, atom, atom_path, numtabs, m.group('args').split(','))
+                            if proc is None: continue
+                            self.ignoreStartIndent = numtabs
+                            self.loadingProc = proc
+                            self.loadingProc.ClearCode()
+                            self.fileLayout += [('PROCDEF', proc.path)]
+                            continue
 
-                path = '/'.join(self.cpath)
-                # if len(self.cpath) > 0 and 'proc' in self.cpath:
-                #    continue
-                # if 'proc' in self.cpath:
-                #    continue
-                if '=' in line or line.strip().startswith('var/'):
-                    if path not in self.Atoms:
-                        self.Atoms[path] = Atom(path)
-                    name, prop = self.consumeVariable(line, filename, ln)
-                    self.Atoms[path].properties[name] = prop
-                    self.fileLayout += [('VAR', path, name)]
+                    path = '/'.join(self.cpath)
+                    # if len(self.cpath) > 0 and 'proc' in self.cpath:
+                    #    continue
+                    # if 'proc' in self.cpath:
+                    #    continue
+                    if '=' in line or line.strip().startswith('var/'):
+                        if path not in self.Atoms:
+                            self.Atoms[path] = Atom(path)
+                        name, prop = self.consumeVariable(line, filename, ln)
+                        self.Atoms[path].properties[name] = prop
+                        self.fileLayout += [('VAR', path, name)]
+            except UnicodeDecodeError as e:
+                self.log.critical("Bad character in file '{}'".format(f))
+
         self.fileLayouts[filename] = self.fileLayout
 
     def consumeVariable(self, line, filename, ln):
